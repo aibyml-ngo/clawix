@@ -131,11 +131,19 @@ Pluggable tools with approval workflows. Bundle built-in skills, create custom o
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/clawix/clawix.git
+# 1. Clone the repository
+git clone https://github.com/clawixAI/clawix.git
 cd clawix
 
-# One-command setup (installs deps, copies .env, starts infra)
-./scripts/setup-dev.sh
+# 2. Prepare your environment file
+cp .env.example .env
+# Edit .env — set at least one AI provider key:
+#   ANTHROPIC_API_KEY, OPENAI_API_KEY, or ZAI_CODING_API_KEY
+# (The installer will guide you through all required values interactively
+#  if you prefer to skip manual editing)
+
+# 3. Run the interactive installer
+pnpm run install:clawix
 ```
 
 <details>
@@ -156,17 +164,26 @@ docker compose -f docker-compose.dev.yml up -d
 Edit `.env` with your API keys:
 
 ```bash
-# Required: encryption key for provider secrets (AES-256-GCM)
-PROVIDER_ENCRYPTION_KEY=$(openssl rand -hex 32)
+# Required: at least one AI provider
+ANTHROPIC_API_KEY=sk-ant-xxx     # Claude models
+OPENAI_API_KEY=sk-xxx            # GPT models
+ZAI_CODING_API_KEY=xxx           # Z.AI Coding Plan (glm-4.7)
 
-# AI providers (used by db:seed; also env fallback at runtime)
-ANTHROPIC_API_KEY=sk-ant-xxx        # Claude
-OPENAI_API_KEY=sk-xxx               # GPT (optional)
+DEFAULT_PROVIDER=openai          # anthropic | openai | zai-coding | custom
+DEFAULT_LLM_MODEL=gpt-4o
 
-# Channels (optional -- used by db:seed to populate channel config)
-TELEGRAM_BOT_TOKEN=123456789:ABCdef...   # Telegram (from @BotFather)
+# Required: encryption key for stored provider keys (AES-256-GCM)
+# Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+PROVIDER_ENCRYPTION_KEY=<64-char-hex-string>
 
-# Database (defaults work with docker-compose)
+# Required in production
+JWT_SECRET=change-me-in-production
+CORS_ALLOWED_ORIGINS=http://localhost:3000
+
+# Optional: Telegram channel
+TELEGRAM_BOT_TOKEN=123456789:ABCdef...
+
+# Database (defaults work for docker-compose dev)
 DATABASE_URL="postgresql://clawix:clawix_dev@localhost:5433/clawix"
 REDIS_URL="redis://localhost:6379"
 ```
@@ -337,7 +354,7 @@ pnpm run install:clawix   # Interactive first-time setup (generates .env, builds
 pnpm run update:clawix    # Rebuild + restart after git pull or config changes
 
 # Infrastructure
-pnpm run docker:dev       # Start Postgres, Redis, pgAdmin
+pnpm run docker:prod     # Start Postgres, Redis, pgAdmin, API, Web
 pnpm run docker:down      # Stop local infra
 
 # Database
