@@ -249,6 +249,7 @@ export class AgentRunnerService {
         channel: options.channel,
         chatId: options.chatId,
         userName: options.userName,
+        replyContext: options.replyContext,
         workspacePath: isSubAgent ? undefined : workspacePaths?.localPath,
         isSubAgent,
         isScheduledTask: options.isScheduledTask,

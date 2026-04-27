@@ -98,6 +98,7 @@ describe('MessageRouterService', () => {
         channelId: 'channel-1',
         userId: 'user-1',
         input: 'Hello agent',
+        replyContext: undefined,
       }),
     );
     expect(channel.sendMessage).toHaveBeenCalledWith({
@@ -108,6 +109,44 @@ describe('MessageRouterService', () => {
         sessionId: 'session-1',
       },
     });
+  });
+
+  it('forwards reply context to agent runner', async () => {
+    const user = { id: 'user-1', telegramId: '123456', isActive: true };
+    const userAgent = { agentDefinitionId: 'agent-1' };
+    const runResult = {
+      sessionId: 'session-1',
+      output: 'Context received',
+      status: 'completed',
+      responseMessageId: 'msg-abc',
+      tokenUsage: { input: 10, output: 5 },
+    };
+
+    mockUserRepo.findByTelegramId.mockResolvedValue(user);
+    mockUserAgentRepo.findByUserId.mockResolvedValue(userAgent);
+    mockAgentRunner.run.mockResolvedValue(runResult);
+
+    const channel = mockChannel();
+    const router = createRouter();
+
+    await router.handleInbound(
+      mockInbound({
+        replyCtx: {
+          from: { id: 42, date: 1_700_000_000, isBot: false },
+          text: 'Original message',
+        },
+      }),
+      channel,
+    );
+
+    expect(mockAgentRunner.run).toHaveBeenCalledWith(
+      expect.objectContaining({
+        replyContext: {
+          from: { id: 42, date: 1_700_000_000, isBot: false },
+          text: 'Original message',
+        },
+      }),
+    );
   });
 
   it('falls back to agentRunId when responseMessageId is missing', async () => {

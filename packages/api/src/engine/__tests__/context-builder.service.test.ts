@@ -147,6 +147,24 @@ describe('ContextBuilderService', () => {
       expect(userContent).toContain('Hello');
     });
 
+    it('should include reply context when provided', async () => {
+      const params: ContextBuildParams = {
+        ...baseParams,
+        replyContext: {
+          from: { id: 42, date: 1_700_000_000, isBot: false },
+          text: 'Original message text',
+        },
+      };
+
+      const result = await service.buildMessages(params);
+
+      const userContent = result[result.length - 1]!.content as string;
+      expect(userContent).toContain('[Reply Context]');
+      expect(userContent).toContain('Original Sender ID: 42');
+      expect(userContent).toContain('Original Sender Is Bot: false');
+      expect(userContent).toContain('Original Message: Original message text');
+    });
+
     it('should include Server Time in runtime context', async () => {
       const result = await service.buildMessages(baseParams);
 

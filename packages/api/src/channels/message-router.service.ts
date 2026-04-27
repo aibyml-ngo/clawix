@@ -118,6 +118,7 @@ export class MessageRouterService {
         channel: channel.type,
         chatId: senderId,
         userName: senderName,
+        replyContext: message.replyCtx,
       });
 
       const responseText = result.output ?? 'Agent completed without output.';

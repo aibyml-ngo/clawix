@@ -1,4 +1,4 @@
-import type { ChatMessage } from '@clawix/shared';
+import type { ChatMessage, InboundMessage } from '@clawix/shared';
 
 /** Fields from AgentDefinition needed by ContextBuilder. */
 export interface ContextAgentDef {
@@ -19,6 +19,8 @@ export interface ContextBuildParams {
   readonly chatId?: string;
   /** User display name. Defaults to 'System'. */
   readonly userName?: string;
+  /** Optional channel reply metadata (e.g., Telegram reply_to_message). */
+  readonly replyContext?: InboundMessage['replyCtx'];
   /** Resolved local workspace path for loading bootstrap files. */
   readonly workspacePath?: string;
   /** When true, skips bootstrap files and adds sub-agent framing to the system prompt. */

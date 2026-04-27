@@ -1,4 +1,5 @@
 import { Bot } from 'grammy';
+import type { Message } from 'grammy/types';
 import { createLogger } from '@clawix/shared';
 import type {
   ChannelAdapter,
@@ -16,6 +17,19 @@ import {
 } from '../utils/message-chunker.js';
 
 const logger = createLogger('channels:telegram');
+
+const extractReplyContext = (message: Message): InboundMessage['replyCtx'] => {
+  if (!message?.reply_to_message || !message.reply_to_message.text) {
+    return undefined;
+  }
+  const replyInfo = message.reply_to_message;
+  return {
+    from: replyInfo.from
+      ? { isBot: replyInfo.from?.is_bot ?? false, id: replyInfo.from.id, date: replyInfo.date }
+      : undefined,
+    text: replyInfo.text!,
+  };
+};
 
 /**
  * Create a Telegram channel adapter using grammy.
@@ -61,7 +75,7 @@ export function createTelegramAdapter(config: ChannelAdapterConfig): ChannelAdap
       senderName: [from.first_name, from.last_name].filter(Boolean).join(' '),
       text: ctx.message.text,
       timestamp: new Date(ctx.message.date * 1000),
-      rawPayload: ctx.message,
+      replyCtx: extractReplyContext(ctx.message),
     };
 
     try {

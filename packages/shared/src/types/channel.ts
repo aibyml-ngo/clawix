@@ -15,6 +15,10 @@ export interface Channel {
 // ------------------------------------------------------------------ //
 
 /** Inbound message received from a channel adapter. */
+export interface ReplyContext {
+  from?: { id: number; date: number; isBot: boolean };
+  text: string;
+}
 export interface InboundMessage {
   readonly channelType: ChannelType;
   readonly channelMessageId: string;
@@ -22,6 +26,7 @@ export interface InboundMessage {
   readonly senderName: string;
   readonly text: string;
   readonly timestamp: Date;
+  readonly replyCtx?: ReplyContext;
   readonly rawPayload?: unknown;
 }
 

@@ -1,4 +1,4 @@
-import type { AgentStatus, TokenUsageRecord } from '@clawix/shared';
+import type { AgentStatus, InboundMessage, TokenUsageRecord } from '@clawix/shared';
 
 import type { MessageStore } from './message-store/message-store.js';
 import type { BudgetTracker } from './budget-tracker.js';
@@ -28,6 +28,8 @@ export interface RunOptions {
   readonly chatId?: string;
   /** User display name. Defaults to 'System'. */
   readonly userName?: string;
+  /** Optional reply context from channel adapters (e.g., Telegram reply_to_message). */
+  readonly replyContext?: InboundMessage['replyCtx'];
   /** When true, this is a re-invocation triggered by sub-agent result delivery. Reuses existing session. */
   readonly isReinvocation?: boolean;
   /**

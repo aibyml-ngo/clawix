@@ -731,6 +731,25 @@ describe('AgentRunnerService', () => {
     );
   });
 
+  it('passes replyContext through to context builder', async () => {
+    await service.run({
+      ...defaultOptions,
+      replyContext: {
+        from: { id: 42, date: 1_700_000_000, isBot: false },
+        text: 'Original message',
+      },
+    });
+
+    expect(mocks.mockContextBuilder.buildMessages).toHaveBeenCalledWith(
+      expect.objectContaining({
+        replyContext: {
+          from: { id: 42, date: 1_700_000_000, isBot: false },
+          text: 'Original message',
+        },
+      }),
+    );
+  });
+
   // ---------------------------------------------------------------- //
   //  Test 20: Sub-agents get empty history instead of parent session  //
   // ---------------------------------------------------------------- //

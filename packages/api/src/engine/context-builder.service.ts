@@ -56,7 +56,13 @@ export class ContextBuilderService {
       isScheduledTask,
       params.workers,
     );
-    const userContent = await this.buildUserMessage(input, channel, chatId, userName);
+    const userContent = await this.buildUserMessage(
+      input,
+      channel,
+      chatId,
+      userName,
+      params.replyContext,
+    );
 
     const systemMessage: ChatMessage = { role: 'system', content: systemPrompt };
     const userMessage: ChatMessage = { role: 'user', content: userContent };
@@ -370,6 +376,7 @@ export class ContextBuilderService {
     channel: string,
     chatId: string,
     userName: string,
+    replyContext?: ContextBuildParams['replyContext'],
   ): Promise<string> {
     const now = new Date();
     const { defaultTimezone } = await this.systemSettingsService.get();
@@ -397,7 +404,18 @@ export class ContextBuilderService {
       `User: ${userName}`,
     ].join('\n');
 
-    return `${runtimeContext}\n\n${input}`;
+    if (!replyContext) {
+      return `${runtimeContext}\n\n${input}`;
+    }
+
+    const replyContextLines = [
+      '[Reply Context]',
+      `Original Sender ID: ${replyContext.from?.id ?? 'unknown'}`,
+      `Original Sender Is Bot: ${replyContext.from?.isBot ?? false}`,
+      `Original Message: ${replyContext.text}`,
+    ].join('\n');
+
+    return `${runtimeContext}\n\n${replyContextLines}\n\n${input}`;
   }
 }
 
