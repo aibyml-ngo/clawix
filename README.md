@@ -88,31 +88,31 @@ Pluggable tools with approval workflows. Bundle built-in skills, create custom o
                         └──────────────────┬───────────────────────┘
                                            │
                         ┌──────────────────▼───────────────────────┐
-                        │             API Gateway                  │
-                        │   NestJS + Fastify  │  JWT  │  Rate Limit│
+                        │             API Gateway                   │
+                        │   NestJS + Fastify  │  JWT  │  Rate Limit │
                         └──────────────────┬───────────────────────┘
                                            │
               ┌────────────────────────────▼────────────────────────────┐
               │                     Core Engine                         │
               │                                                         │
-              │  ┌─────────────┐  ┌──────────────┐  ┌───────────────┐   │
-              │  │  Reasoning  │  │    Tool      │  │    Swarm      │   │
-              │  │   Loops     │  │  Execution   │  │ Coordinator   │   │
-              │  └─────────────┘  └──────────────┘  └───────────────┘   │
+              │  ┌─────────────┐  ┌──────────────┐  ┌───────────────┐  │
+              │  │  Reasoning  │  │    Tool       │  │    Swarm      │  │
+              │  │   Loops     │  │  Execution    │  │ Coordinator   │  │
+              │  └─────────────┘  └──────────────┘  └───────────────┘  │
               │                                                         │
               │  Providers: Claude │ GPT │ OpenAI-compatible │ Custom   │
-              └────────────────────────────┬──────────────────────────-─┘
+              └────────────────────────────┬───────────────────────────┘
                                            │
-              ┌────────────────────────────▼───────────────────────────┐
-              │                  Container Pool                        │
+              ┌────────────────────────────▼────────────────────────────┐
+              │                  Container Pool                         │
               │  ┌──────────┐  ┌──────────────┐  ┌─────────────────┐   │
-              │  │  Warm    │  │  Ephemeral   │  │  Resource       │   │
-              │  │  Primary │  │  Sub-Agents  │  │  Limits         │   │
+              │  │  Warm     │  │  Ephemeral   │  │  Resource       │   │
+              │  │  Primary  │  │  Sub-Agents  │  │  Limits         │   │
               │  └──────────┘  └──────────────┘  └─────────────────┘   │
               └────────────────────────────┬───────────────────────────┘
                                            │
               ┌────────────────────────────▼────────────────────────────┐
-              │                    Data Layer                           │
+              │                    Data Layer                            │
               │        PostgreSQL  │  Redis  │  User Workspaces         │
               └─────────────────────────────────────────────────────────┘
 ```
@@ -123,36 +123,49 @@ Pluggable tools with approval workflows. Bundle built-in skills, create custom o
 
 ### Prerequisites
 
-- **Node.js 20+** and **pnpm 9+**
-- **Docker** (for agent containers, PostgreSQL, and Redis)
-- **Docker Desktop** (user-friendly platform for container management)
+- [Git](https://git-scm.com/)
+- [Node.js 20+](https://nodejs.org/)
+- [pnpm 9+](https://pnpm.io/installation) (`npm install -g pnpm`)
+- [Docker](https://docs.docker.com/get-docker/) (for agent containers, PostgreSQL, and Redis)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (user-friendly platform for container management) — make sure the daemon is **running** before you continue
+- [Docker Compose](https://docs.docker.com/compose/install/) (included in Docker Desktop)
 
-> **Self-hosting in production?** Skip ahead to [Production Deployment](#production-deployment-first-run) — the installer handles `.env` generation, image builds, and bootstrap for you. The steps below are for local development.
+Verify everything in one go:
+
+```bash
+node --version && pnpm --version && docker --version && docker info --format '{{.ServerVersion}}'
+```
+
+> **Self-hosting in production?** Skip ahead to [Production Deployment](#production-deployment-first-run) — the installer handles `.env` generation, image builds, and bootstrap for you. The steps below are for **local development**.
 
 ### 1. Clone & Install
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/ClawixAI/clawix.git
 cd clawix
 
-# 2. Prepare your environment file
-cp .env.example .env
-# Edit .env — set at least one AI provider key:
-#   ANTHROPIC_API_KEY, OPENAI_API_KEY, or ZAI_CODING_API_KEY
-# (The installer will guide you through all required values interactively
-#  if you prefer to skip manual editing)
-
-# 3. Run the interactive installer
+# Interactive installer — prompts for providers/keys, generates .env,
+# builds the agent image, starts the dev stack.
 pnpm run install:clawix
 ```
 
+> ⚠️ **The installer is `.env`-aware.** If `.env` already exists, the installer **keeps it as-is and skips all prompts** (you'll see `.env already exists — keeping existing secrets and configuration.`). It won't backfill missing values like `POSTGRES_PASSWORD`. To force a clean run: `mv .env .env.bak && pnpm run install:clawix`.
+
+When the installer prints `=== Installation complete ===`, the dev stack is already running. **Skip step 3** below.
+
 <details>
-<summary>Manual setup (click to expand)</summary>
+<summary>Manual setup (click to expand) — for users who don't want the interactive flow</summary>
 
 ```bash
 pnpm install
 cp .env.example .env
+
+# .env.example ships with PROVIDER_ENCRYPTION_KEY=$(openssl rand -hex 32) as a
+# placeholder. .env is NOT a shell — that line is taken literally. Replace it:
+KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+# macOS sed: drop the empty '' if you're on Linux
+sed -i '' "s|^PROVIDER_ENCRYPTION_KEY=.*|PROVIDER_ENCRYPTION_KEY=$KEY|" .env
+
 pnpm --filter @clawix/shared run build
 docker build -t clawix-agent:latest -f infra/docker/agent/Dockerfile .
 docker compose -f docker-compose.dev.yml up -d
@@ -160,33 +173,78 @@ docker compose -f docker-compose.dev.yml up -d
 
 </details>
 
-### 2. Configure
+### 2. Configure (only if you used manual setup)
 
-Edit `.env` with your API keys:
+Open `.env` and fill in real values for the provider keys you plan to use:
 
-```bash
-# Required: encryption key for provider secrets (AES-256-GCM)
-PROVIDER_ENCRYPTION_KEY=$(openssl rand -hex 32)
+```dotenv
+# Required: 64-char hex literal — NOT a shell expression. Generate with:
+#   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+PROVIDER_ENCRYPTION_KEY=<paste 64-char hex here>
 
 # AI providers (used by db:seed; also env fallback at runtime)
 ANTHROPIC_API_KEY=sk-ant-xxx        # Claude
 OPENAI_API_KEY=sk-xxx               # GPT (optional)
 
-# Channels (optional -- used by db:seed to populate channel config)
+# Channels (optional — used by db:seed to populate channel config)
 TELEGRAM_BOT_TOKEN=123456789:ABCdef...   # Telegram (from @BotFather)
 
-# Database (defaults work with docker-compose)
+# Database (defaults match docker-compose.dev.yml — leave alone for local dev)
 DATABASE_URL="postgresql://clawix:clawix_dev@localhost:5433/clawix"
 REDIS_URL="redis://localhost:6379"
 ```
 
-### 3. Run
+> ⚠️ **`.env` is not a shell.** `docker compose` and `dotenv` read this file literally. Anything like `$(openssl rand -hex 32)` is **not** evaluated — it lands in the file as a literal string and breaks at runtime (you'll see encryption errors or auth failures). Always paste pre-computed values.
+
+#### After updating `.env`, will the container be recreated by itself?
+
+**No — Docker doesn't watch `.env` for changes. You have to trigger it manually.**
+
+Two cases, same answer:
+
+1. **You only edited values inside `.env`** (same keys, new values).
+   `docker compose up -d` alone **won't** recreate the container — compose hashes the `.env` *path*, not its contents, so it sees the same file and assumes nothing changed. You need `--force-recreate`:
+   ```bash
+   docker compose -f docker-compose.dev.yml up -d --force-recreate api-server
+   ```
+2. **You added or removed keys in `.env`.** Same thing — use `--force-recreate` to be safe.
+
+**Why a plain `restart` isn't enough.** `docker restart` and `docker compose restart` re-run the *existing* container with the env vars that were baked in at create time. Variables from `env_file:` are only read when the container is **created**, not when it starts. So you need `up --force-recreate` (or `down` + `up`), not `restart`.
+
+**Quick check** — confirm the new value is live inside the container:
+
+```bash
+docker exec clawix-api printenv OPENAI_API_KEY
+```
+
+### 3. Run (only if you used manual setup)
 
 ```bash
 pnpm run dev    # API on :3001, Dashboard on :3000
 ```
 
-That's it. Open `http://localhost:3000` or message your Telegram bot.
+Open `http://localhost:3000` or message your Telegram bot.
+
+### Common pitfalls
+
+The most frequent install foot-guns — read this once before you start.
+
+- **Installer silently keeps an existing `.env`.** `pnpm run install:clawix` short-circuits when `.env` exists, so it won't generate `POSTGRES_PASSWORD`, `JWT_SECRET`, or a real `PROVIDER_ENCRYPTION_KEY` even when you pick production mode. Move the file aside first: `mv .env .env.bak && pnpm run install:clawix`.
+- **Literal `$(openssl rand -hex 32)` in `.env`.** Comes from the shipped `.env.example`. It does **not** evaluate. Replace it with the actual hex (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`).
+- **`POSTGRES_PASSWORD is required` when starting prod compose.** The dev `.env` template doesn't define it — pointing `docker-compose.prod.yml` at a dev-shaped `.env` fails immediately. Either run the installer in production mode (it fills these in) or stay on `docker-compose.dev.yml` for local work.
+- **Postgres `password authentication failed` after re-installing.** `POSTGRES_PASSWORD` only takes effect on **first init** of an empty data directory. If the `postgres_data` volume already exists from an earlier run with different credentials, new passwords silently don't apply. Two fixes — pick one:
+  ```bash
+  # Reset in place (keeps data):
+  docker exec clawix-postgres psql -U clawix -d clawix \
+    -c "ALTER USER clawix WITH PASSWORD 'clawix_dev';"
+  # — or wipe and reinitialize (destroys all DB data):
+  docker compose -f docker-compose.dev.yml down -v
+  ```
+- **"Found orphan containers" warning.** The prod and dev compose files share `container_name`s but use different *service* names (`api` vs `api-server`). Switching between them creates orphan conflicts. Add `--remove-orphans`:
+  ```bash
+  docker compose -f docker-compose.dev.yml up -d --remove-orphans
+  ```
+- **Secrets handling.** Treat `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `TELEGRAM_BOT_TOKEN`, `JWT_SECRET`, and `PROVIDER_ENCRYPTION_KEY` as live credentials. If you ever paste any of them into chat tools, screenshots, issue trackers, or logs, **rotate them at the provider** — editing `.env` alone doesn't undo a leak.
 
 ---
 
