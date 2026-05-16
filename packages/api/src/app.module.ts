@@ -32,6 +32,7 @@ import { SystemSettingsModule } from './system-settings/index.js';
 import { TokensModule } from './tokens/index.js';
 import { ProviderConfigModule } from './provider-config/provider-config.module.js';
 import { WorkspaceModule } from './workspace/index.js';
+import { PacksModule } from './packs/packs.module.js';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { WorkspaceModule } from './workspace/index.js';
     SystemSettingsModule,
     ProviderConfigModule,
     WorkspaceModule,
+    PacksModule,
   ],
   providers: [
     {

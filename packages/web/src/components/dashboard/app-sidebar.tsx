@@ -10,6 +10,7 @@ import {
   ChevronRight,
   ChevronsUpDown,
   Coins,
+  Compass,
   CreditCard,
   FolderOpen,
   Notebook,
@@ -59,6 +60,11 @@ const platformItems = [
     title: 'Conversations',
     icon: MessageSquare,
     href: '/conversations',
+  },
+  {
+    title: 'Explore',
+    icon: Compass,
+    href: '/explore',
   },
   {
     title: 'Workspace',

@@ -1,0 +1,117 @@
+{
+  "id": "fin",
+  "name": "Finance & Accounting",
+  "icon": "📊",
+  "color": "#2563eb",
+  "description": "AI-assisted bookkeeping, reconciliation, cashflow forecasting, and internal audit for accounting firms and finance teams. Human-in-the-loop on every payment, journal entry, and period close.",
+  "tags": ["finance", "accounting", "audit", "bookkeeping"],
+  "skills": [
+    "ap-ar-aging",
+    "balance-sheet",
+    "bank-reconciliation",
+    "cashflow-analysis",
+    "chart-of-accounts",
+    "double-entry-bookkeeping",
+    "financial-data-handling",
+    "financial-reporting",
+    "internal-audit",
+    "security-baseline"
+  ],
+  "agents": [
+    {
+      "name": "accounting-coordinator",
+      "role": "primary",
+      "model": "claude-sonnet-4-6",
+      "description": "Maintains the engagement register, period-close calendar, and cross-engagement task tracker. Routes documents and flags open items.",
+      "skills": ["security-baseline", "financial-data-handling", "internal-audit"]
+    },
+    {
+      "name": "bookkeeping",
+      "role": "worker",
+      "model": "claude-sonnet-4-6",
+      "description": "Classifies transactions, drafts journal entries, and routes coding questions.",
+      "skills": ["security-baseline", "financial-data-handling", "chart-of-accounts", "double-entry-bookkeeping"],
+      "spawns": ["ocr-extractor", "gl-classifier"]
+    },
+    {
+      "name": "reconciliation",
+      "role": "worker",
+      "model": "claude-sonnet-4-6",
+      "description": "Bank and ledger reconciliation — matches statements to posted entries, surfaces breaks.",
+      "skills": ["security-baseline", "financial-data-handling", "bank-reconciliation", "double-entry-bookkeeping"],
+      "spawns": ["ocr-extractor", "evidence-collector"]
+    },
+    {
+      "name": "ap-ar",
+      "role": "worker",
+      "model": "claude-sonnet-4-6",
+      "description": "Manages payables and receivables aging, payment-run drafts, and dunning notices.",
+      "skills": ["security-baseline", "financial-data-handling", "ap-ar-aging", "double-entry-bookkeeping"],
+      "spawns": ["evidence-collector", "gl-classifier"]
+    },
+    {
+      "name": "cashflow",
+      "role": "worker",
+      "model": "claude-sonnet-4-6",
+      "description": "13-week cashflow forecast, scenario analysis, and variance commentary.",
+      "skills": ["security-baseline", "financial-data-handling", "cashflow-analysis", "ap-ar-aging"],
+      "spawns": ["variance-analyzer"]
+    },
+    {
+      "name": "audit",
+      "role": "worker",
+      "model": "claude-sonnet-4-6",
+      "description": "Internal audit sampling, findings drafting, and review-pass tracking.",
+      "skills": ["security-baseline", "financial-data-handling", "internal-audit", "double-entry-bookkeeping"],
+      "spawns": ["evidence-collector", "reviewer"]
+    },
+    {
+      "name": "reporting",
+      "role": "worker",
+      "model": "claude-sonnet-4-6",
+      "description": "Drafts P&L, balance sheet, and management accounts from ledger data.",
+      "skills": ["security-baseline", "financial-data-handling", "balance-sheet", "financial-reporting", "double-entry-bookkeeping"],
+      "spawns": ["variance-analyzer", "evidence-collector"]
+    }
+  ],
+  "subagents": [
+    { "name": "ocr-extractor",     "model": "claude-haiku-4-5", "description": "Extracts structured data from scanned invoices and statements." },
+    { "name": "gl-classifier",     "model": "claude-haiku-4-5", "description": "Classifies transactions against the chart of accounts." },
+    { "name": "variance-analyzer", "model": "claude-haiku-4-5", "description": "Computes budget-vs-actual variances and flags outliers." },
+    { "name": "evidence-collector","model": "claude-haiku-4-5", "description": "Pulls supporting documents for audit samples and reconciliations." },
+    { "name": "reviewer",          "model": "claude-sonnet-4-6","description": "Performs a second-pass review of draft outputs before approval." }
+  ],
+  "governance": {
+    "humanInLoopActions": [
+      "post_journal_entry", "release_payment", "schedule_payment",
+      "send_invoice", "send_dunning_notice", "file_return",
+      "close_period", "adjust_prior_period", "change_chart_of_accounts"
+    ]
+  },
+  "inspirations": [
+    {
+      "title": "Month-end close status",
+      "prompt": "What's the state of this month's close? What's on track, what's slipping, and what decisions do I need to make today?"
+    },
+    {
+      "title": "13-week cashflow forecast",
+      "prompt": "Build a 13-week cashflow forecast from our latest AR aging and AP schedule. Flag any weeks where we dip below £50k operating buffer."
+    },
+    {
+      "title": "Bank reconciliation",
+      "prompt": "Reconcile our main operating account against the June ledger. List every unmatched item and suggest a coding for each."
+    },
+    {
+      "title": "AP aging and payment run",
+      "prompt": "Show me our AP aging over 60 days. Draft a payment run for everything over 45 days that isn't in dispute."
+    },
+    {
+      "title": "Internal audit sample",
+      "prompt": "Run a MUS sample on our Q2 journal entries. Produce a findings draft with any items over materiality threshold flagged for partner review."
+    },
+    {
+      "title": "Management accounts draft",
+      "prompt": "Draft May management accounts — P&L vs budget, balance sheet, and a one-page commentary on the three largest variances."
+    }
+  ]
+}

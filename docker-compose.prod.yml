@@ -81,6 +81,7 @@ services:
       SKILLS_BUILTIN_HOST_DIR: ${CLAWIX_HOST_SKILLS_BUILTIN_DIR:-${PWD}/skills/builtin}
       SKILLS_CUSTOM_DIR: /app/skills/custom
       SKILLS_CUSTOM_HOST_DIR: ${CLAWIX_HOST_SKILLS_CUSTOM_DIR:-${PWD}/skills/custom}
+      SKILLS_PACKS_DIR: /app/skills/packs
       # Public memory lives under the persistent /data bind mount so it
       # survives `docker compose down` and image rebuilds.
       # WhatsApp Baileys auth state — written under the persistent /data mount
@@ -91,6 +92,7 @@ services:
       - ./data:/data
       - ./skills/builtin:/app/skills/builtin:ro
       - ./skills/custom:/app/skills/custom
+      - ./skills/packs:/app/skills/packs:ro
       - ./infra/templates:/app/infra/templates:ro
     depends_on:
       postgres:

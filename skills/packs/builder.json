@@ -1,0 +1,106 @@
+{
+  "id": "builder",
+  "name": "Home Build & Construction",
+  "icon": "🏗️",
+  "color": "#d97706",
+  "description": "Material take-offs, wholesale-priced quotes, schedules of works, site surveys, and client proposals for home device installers, small builders, and interior designers. Prices come from named trade counters — never guessed.",
+  "tags": ["construction", "builder", "installer", "design", "renovation", "trades"],
+  "skills": [
+    "builder-takeoff",
+    "designer-spec-pack",
+    "device-install-survey",
+    "home-build-shared",
+    "wholesale-sourcing"
+  ],
+  "agents": [
+    {
+      "name": "home-build-coordinator",
+      "role": "primary",
+      "model": "claude-sonnet-4-6",
+      "description": "Routes jobs to the right specialist. Handles project scaffolding, scope clarification, and cross-role coordination. Reads all five skills.",
+      "skills": ["home-build-shared", "device-install-survey", "builder-takeoff", "designer-spec-pack", "wholesale-sourcing"]
+    },
+    {
+      "name": "installer",
+      "role": "worker",
+      "model": "claude-sonnet-4-6",
+      "description": "Home device installer workflow — site survey to BoM to installation checklist to commissioning report. Part P / Gas Safe / MCS compliant.",
+      "skills": ["home-build-shared", "device-install-survey"]
+    },
+    {
+      "name": "builder",
+      "role": "worker",
+      "model": "claude-sonnet-4-6",
+      "description": "Small-builder workflow — scope description to take-off to wholesale-priced BoM to schedule of works and priced quote.",
+      "skills": ["home-build-shared", "builder-takeoff"]
+    },
+    {
+      "name": "designer",
+      "role": "worker",
+      "model": "claude-sonnet-4-6",
+      "description": "Home designer workflow — client brief to spec sheets (brand, product code, dimensions, lead time) to comparison table to proposal pack.",
+      "skills": ["home-build-shared", "designer-spec-pack"]
+    },
+    {
+      "name": "wholesale-buyer",
+      "role": "worker",
+      "model": "claude-sonnet-4-6",
+      "description": "Turns a finalised BoM into a buying plan split by trade counter, with prices fetched from live supplier pages.",
+      "skills": ["home-build-shared", "wholesale-sourcing"]
+    },
+    {
+      "name": "quote-builder",
+      "role": "worker",
+      "model": "claude-sonnet-4-6",
+      "description": "Rolls up materials, waste, markup, and VAT into a full client-facing quote.",
+      "skills": ["home-build-shared"]
+    }
+  ],
+  "subagents": [
+    { "name": "supplier-pricer",     "model": "claude-haiku-4-5",  "description": "Fetches live prices from named UK/EU/US trade counters via web_fetch. Spawned by wholesale-buyer and quote-builder." },
+    { "name": "takeoff-estimator",   "model": "claude-sonnet-4-6", "description": "Extracts quantities from a scope description or drawing. Spawned by the builder agent." },
+    { "name": "photo-extractor",     "model": "claude-sonnet-4-6", "description": "Extracts measurements and product references from site photos. Spawned by installer and builder." },
+    { "name": "spec-validator",      "model": "claude-haiku-4-5",  "description": "Checks spec sheets for completeness — every field must be present before output." },
+    { "name": "quote-renderer",      "model": "claude-haiku-4-5",  "description": "Renders the final costed quote in client-ready format." },
+    { "name": "deadline-watcher",    "model": "claude-haiku-4-5",  "description": "Automated daily check on project milestones, supplier lead times, and certification expiry. Runs on a cron schedule." },
+    { "name": "compliance-guardian", "model": "claude-haiku-4-5",  "description": "Flags work requiring licensed certification (Part P, Gas Safe, MCS, DNO) before it appears in any BoM or quote." }
+  ],
+  "governance": {
+    "humanInLoopActions": [
+      "email.send", "supplier_portal.submit", "sign.execute",
+      "doc.export_pdf_docx", "email.create_draft", "drive.upload_draft"
+    ],
+    "guardrails": [
+      "Prices sourced from named supplier pages only — never guessed",
+      "Licensed work (Part P, Gas Safe, MCS, DNO) flagged and not BoM'd without disclosure",
+      "Client personal data stored on disk under /workspace/<project>/clients/ — not in memory",
+      "All outbound documents require human approval before sending"
+    ]
+  },
+  "inspirations": [
+    {
+      "title": "Renovation take-off and quote",
+      "prompt": "I'm renovating a 4-bed Victorian terrace — full rewire, new bathrooms, kitchen extension. Help me build a take-off from my scope notes and price it from Travis Perkins and Screwfix."
+    },
+    {
+      "title": "EV charger install survey",
+      "prompt": "I'm installing a 7kW EV charger. Run me through the site survey questions, then produce a BoM and check whether DNO notification applies."
+    },
+    {
+      "title": "Kitchen design spec pack",
+      "prompt": "Create a spec pack for a Shaker kitchen refit — units, worktop, sink, taps, appliances. Include brand options, dimensions, lead times, and a comparison table for the client."
+    },
+    {
+      "title": "Wholesale buying plan",
+      "prompt": "I've finalised my BoM for a loft conversion. Split it into a buying plan by supplier — what to get from Travis Perkins, Jewson, and CEF — with today's prices."
+    },
+    {
+      "title": "Schedule of works",
+      "prompt": "Build a week-by-week schedule of works for a single-storey rear extension. Include groundworks, structural, first-fix, second-fix, and finishes with crew requirements."
+    },
+    {
+      "title": "CCTV and smart-home install",
+      "prompt": "Survey checklist for a 6-camera CCTV system with smart home integration — Lutron lighting, Sonos audio, UniFi network. What do I need to measure and confirm on site?"
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "id": "ngo",
+  "name": "NGO Operations",
+  "icon": "🌍",
+  "color": "#059669",
+  "description": "Program coordination, donor engagement, M&E, communications, and field operations for non-governmental organisations. Dignity-first data handling, GDPR-aligned beneficiary protection, and human-in-the-loop on all outbound communications.",
+  "tags": ["ngo", "nonprofit", "grants", "monitoring", "evaluation", "humanitarian"],
+  "skills": [
+    "ngo-comms",
+    "ngo-data-protection",
+    "ngo-donor-proposal",
+    "ngo-grant-research",
+    "ngo-impact-report",
+    "ngo-mne",
+    "ngo-safeguarding"
+  ],
+  "agents": [
+    {
+      "name": "program-coordinator",
+      "role": "primary",
+      "model": "claude-sonnet-4-6",
+      "description": "Maintains the master workplan, partner register, and activity tracker. Drafts status notes and flags deviations from approved plans.",
+      "skills": ["ngo-safeguarding", "ngo-comms"]
+    },
+    {
+      "name": "donor-engagement",
+      "role": "worker",
+      "model": "claude-sonnet-4-6",
+      "description": "Researches donor fit, drafts proposals, tracks submission deadlines, and prepares stewardship updates.",
+      "skills": ["ngo-grant-research", "ngo-donor-proposal", "ngo-data-protection", "ngo-comms"]
+    },
+    {
+      "name": "monitoring-evaluation",
+      "role": "worker",
+      "model": "claude-sonnet-4-6",
+      "description": "Designs M&E frameworks, processes survey data, and drafts indicator progress tables and impact narratives.",
+      "skills": ["ngo-mne", "ngo-impact-report", "ngo-data-protection"]
+    },
+    {
+      "name": "communications",
+      "role": "worker",
+      "model": "claude-sonnet-4-6",
+      "description": "Produces external communications — case studies, social content, newsletters — with dignity-preserving storytelling rules enforced.",
+      "skills": ["ngo-comms", "ngo-data-protection", "ngo-safeguarding"]
+    },
+    {
+      "name": "field-operations",
+      "role": "worker",
+      "model": "claude-sonnet-4-6",
+      "description": "Supports field data collection, KoboToolbox form design, and site-level reporting.",
+      "skills": ["ngo-data-protection", "ngo-mne", "ngo-safeguarding"]
+    }
+  ],
+  "subagents": [],
+  "governance": {
+    "humanInLoopActions": [
+      "send_donor_communication", "submit_grant_proposal",
+      "publish_beneficiary_story", "share_beneficiary_data_externally",
+      "sign_partner_agreement"
+    ],
+    "guardrails": [
+      "Beneficiary names never stored in memory — aggregates only",
+      "All external communications are drafts pending human approval",
+      "Safeguarding incidents route to designated safeguarding lead only",
+      "Donor data never cross-referenced between engagements without consent",
+      "PII files marked pii: true in frontmatter and excluded from org memory"
+    ]
+  },
+  "inspirations": [
+    {
+      "title": "Find matching donors",
+      "prompt": "Find donors whose mandate matches our water-and-sanitation programme in East Africa. Score each one for fit and flag the three most promising with next steps."
+    },
+    {
+      "title": "Draft a grant proposal section",
+      "prompt": "Draft the Theory of Change section for our Girls' Education proposal to the XYZ Foundation. Word limit 500. Use our logframe in plans/ged-logframe.md."
+    },
+    {
+      "title": "M&E indicator progress",
+      "prompt": "Process the Q2 KoboToolbox survey export and update our indicator progress table. Flag any indicators more than 15% off target."
+    },
+    {
+      "title": "Workplan status note",
+      "prompt": "What activities are on track, at risk, or slipping this month? Draft a one-page status note for the board using our approved workplan."
+    },
+    {
+      "title": "Impact report narrative",
+      "prompt": "Draft the 'Our Impact' section of our annual report. Use the Q4 M&E data in reports/q4-indicators.md. Keep it under 400 words and make it suitable for a general donor audience."
+    },
+    {
+      "title": "Safeguarding incident log",
+      "prompt": "A potential safeguarding concern has been raised. Help me document it following our safeguarding policy. What information do I need to capture and who should it go to?"
+    }
+  ]
+}

@@ -1,0 +1,164 @@
+{
+  "id": "legal",
+  "name": "Legal & Compliance",
+  "icon": "⚖️",
+  "color": "#7c3aed",
+  "description": "Research, contract analysis, due diligence, and drafting for law firms and in-house legal teams. Every output is a draft for lawyer review — the system never sends, files, or advises autonomously.",
+  "tags": ["legal", "contracts", "compliance", "due-diligence", "litigation"],
+  "skills": [
+    "legal-amendment-history",
+    "legal-brief-section-drafter",
+    "legal-bundle-indexer",
+    "legal-case-law-search",
+    "legal-case-summarization",
+    "legal-chronology-builder",
+    "legal-citation-verification",
+    "legal-claim-chart",
+    "legal-cold-start-interview",
+    "legal-conflict-check",
+    "legal-contract-clause-analysis",
+    "legal-deadline-surface",
+    "legal-deposition-prep",
+    "legal-disclaimer-insertion",
+    "legal-due-diligence-report",
+    "legal-escalation-flagger",
+    "legal-jurisdiction-detection",
+    "legal-hold",
+    "legal-matter-intake",
+    "legal-memo-drafting",
+    "legal-pedagogy-posture",
+    "legal-pii-redaction",
+    "legal-privilege-log-review",
+    "legal-privilege-tagging",
+    "legal-prompt-injection-defense",
+    "legal-redline-generation",
+    "legal-renewal-tracker",
+    "legal-risk-flagging",
+    "legal-socratic-drill",
+    "legal-stakeholder-summary",
+    "legal-statute-lookup",
+    "legal-subpoena-triage"
+  ],
+  "agents": [
+    {
+      "name": "case-research",
+      "role": "worker",
+      "tier": "READ",
+      "model": "claude-sonnet-4-6",
+      "description": "Retrieves case-law authorities for a stated legal question, filtered by jurisdiction and point-in-time.",
+      "skills": ["legal-case-law-search", "legal-jurisdiction-detection", "legal-citation-verification", "legal-statute-lookup"]
+    },
+    {
+      "name": "contract-analyst",
+      "role": "worker",
+      "tier": "READ",
+      "model": "claude-sonnet-4-6",
+      "description": "Parses contracts, flags non-standard clauses, compares to house templates, identifies risk.",
+      "skills": ["legal-contract-clause-analysis", "legal-risk-flagging", "legal-privilege-tagging", "legal-pii-redaction"]
+    },
+    {
+      "name": "case-summarizer",
+      "role": "worker",
+      "tier": "READ",
+      "model": "claude-sonnet-4-6",
+      "description": "Turns long judgments and briefs into structured, citable summaries.",
+      "skills": ["legal-case-summarization", "legal-citation-verification", "legal-bundle-indexer"]
+    },
+    {
+      "name": "due-diligence",
+      "role": "worker",
+      "tier": "READ",
+      "model": "claude-sonnet-4-6",
+      "description": "Scope-by-scope DD against a target's data room and public registers.",
+      "skills": ["legal-due-diligence-report", "legal-bundle-indexer", "legal-privilege-tagging", "legal-pii-redaction"]
+    },
+    {
+      "name": "legal-drafter",
+      "role": "worker",
+      "tier": "DRAFT",
+      "model": "claude-sonnet-4-6",
+      "description": "First-draft memos, letters, clause edits, and redlines — always returned as drafts for lawyer review.",
+      "skills": ["legal-memo-drafting", "legal-redline-generation", "legal-brief-section-drafter", "legal-disclaimer-insertion"]
+    },
+    {
+      "name": "deadline-watcher",
+      "role": "worker",
+      "tier": "READ",
+      "model": "claude-haiku-4-5",
+      "description": "Surfaces upcoming deadlines from calendar, docket, and matter records.",
+      "skills": ["legal-deadline-surface", "legal-renewal-tracker"]
+    },
+    {
+      "name": "client-comms",
+      "role": "worker",
+      "tier": "DRAFT",
+      "model": "claude-sonnet-4-6",
+      "description": "Drafts client-facing language for lawyer review — never sent autonomously.",
+      "skills": ["legal-stakeholder-summary", "legal-disclaimer-insertion"]
+    },
+    {
+      "name": "intern-assistant",
+      "role": "worker",
+      "tier": "DRAFT",
+      "model": "claude-sonnet-4-6",
+      "description": "Supervised junior assistant for trainees — not client-facing.",
+      "skills": ["legal-socratic-drill", "legal-pedagogy-posture", "legal-cold-start-interview"]
+    }
+  ],
+  "subagents": [
+    {
+      "name": "compliance-guardian",
+      "model": "claude-haiku-4-5",
+      "description": "Non-bypassable review of every output against the firm's guardrails before release. Spawned automatically — cannot be bypassed by any agent."
+    },
+    {
+      "name": "citation-verifier",
+      "model": "claude-haiku-4-5",
+      "description": "Verifies every authority cited in an output is real and accurately quoted. Runs on all READ and DRAFT outputs."
+    },
+    {
+      "name": "prompt-injection-sentry",
+      "model": "claude-haiku-4-5",
+      "description": "Quarantines injection attempts in ingested documents before any agent sees the content."
+    }
+  ],
+  "governance": {
+    "humanInLoopActions": [
+      "send_client_communication", "file_court_document", "execute_agreement",
+      "release_legal_hold", "disclose_privileged_document", "unmask_pii"
+    ],
+    "guardrails": [
+      "No jurisdiction outside matter scope without explicit flag",
+      "No output sent directly to clients — drafts only",
+      "Citation verification required on every authority cited",
+      "Conflict check before matter intake",
+      "Privilege log maintained for all reviewed documents"
+    ]
+  },
+  "inspirations": [
+    {
+      "title": "Review a contract",
+      "prompt": "Review this NDA and flag any non-standard clauses. Compare to our house template and summarise the top 3 risks in plain English."
+    },
+    {
+      "title": "Case law research",
+      "prompt": "Find Singapore Court of Appeal cases on restraint of trade clauses in employment contracts from the last 5 years. Return structured authorities with citations."
+    },
+    {
+      "title": "Due diligence on a target",
+      "prompt": "Run a scope 1 DD on this target company. Check public registers, flag any disclosed litigation, and list outstanding regulatory filings."
+    },
+    {
+      "title": "Redline a contract",
+      "prompt": "Redline this services agreement against our standard template. Mark every deviation and suggest fallback language for the clauses we can't accept as-is."
+    },
+    {
+      "title": "Deadline surface",
+      "prompt": "What contract renewals, limitation periods, and court deadlines are coming up in the next 30 days across all open matters?"
+    },
+    {
+      "title": "Matter chronology",
+      "prompt": "Build a chronology for matter ACME-2025-003 from all documents in the bundle. Output as a table with date, event, source document, and privilege flag."
+    }
+  ]
+}
