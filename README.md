@@ -144,7 +144,7 @@ node --version && pnpm --version && docker --version && docker info --format '{{
 git clone https://github.com/ClawixAI/clawix.git
 cd clawix
 
-# Interactive installer — prompts for providers/keys, generates .env,
+# 2. Run the interactive installer — prompts for providers/keys, generates .env,
 # builds the agent image, starts the dev stack.
 pnpm run install:clawix
 ```
