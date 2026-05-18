@@ -85,7 +85,12 @@ export class GeminiProvider implements LLMProvider {
     }
     this.client = new GoogleGenAI({
       apiKey,
-      ...(baseURL ? { httpOptions: { baseUrl: baseURL } } : {}),
+      httpOptions: {
+        // v1beta exposes preview models (gemini-3-flash-preview, etc.) that are
+        // not yet promoted to the stable v1 endpoint which the SDK defaults to.
+        apiVersion: 'v1beta',
+        ...(baseURL ? { baseUrl: baseURL } : {}),
+      },
     });
   }
 

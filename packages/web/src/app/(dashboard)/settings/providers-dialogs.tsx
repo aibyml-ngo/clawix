@@ -68,7 +68,7 @@ export function CreateProviderDialog({
             e.preventDefault();
             const form = new FormData(e.currentTarget);
             const data: Record<string, unknown> = {
-              provider: form.get('provider'),
+              provider: (form.get('provider') as string).trim().toLowerCase(),
               displayName: form.get('displayName'),
               apiKey: form.get('apiKey'),
               isDefault: form.get('isDefault') === 'on',

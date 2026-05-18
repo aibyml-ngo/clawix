@@ -163,6 +163,9 @@ export default function PackDetailPage() {
                   title={insp.title}
                   prompt={insp.prompt}
                   color={pack.color}
+                  onClick={() =>
+                    router.push(`/conversations?prompt=${encodeURIComponent(insp.prompt)}`)
+                  }
                 />
               ))}
             </div>
@@ -368,13 +371,16 @@ function InspirationCard({
   title,
   prompt,
   color,
+  onClick,
 }: {
   title: string;
   prompt: string;
   color: string;
+  onClick: () => void;
 }) {
   return (
     <button
+      onClick={onClick}
       className="group flex cursor-pointer flex-col items-start justify-start rounded-lg border border-l-[3px] p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02] hover:shadow-md"
       style={{ borderLeftColor: color, borderColor: `${color}30` }}
       onMouseEnter={(e) => {

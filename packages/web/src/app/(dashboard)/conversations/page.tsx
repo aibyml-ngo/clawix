@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { PanelLeftClose, PanelLeftOpen, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authFetch } from '@/lib/auth';
@@ -12,6 +13,17 @@ import { SessionSidebar } from './session-sidebar';
 const SIDEBAR_STORAGE_KEY = 'conversations-sidebar-open';
 
 export default function ConversationsPage() {
+  return (
+    <Suspense>
+      <ConversationsInner />
+    </Suspense>
+  );
+}
+
+function ConversationsInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   // Initialize to false for SSR, then sync from localStorage after hydration
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -52,6 +64,17 @@ export default function ConversationsPage() {
     refreshSessions,
     toolProgressMode,
   } = useChat();
+
+  // Auto-send a prompt passed via ?prompt= query param (from Explore inspiration cards).
+  const promptSentRef = useRef(false);
+  useEffect(() => {
+    if (promptSentRef.current) return;
+    const prompt = searchParams.get('prompt');
+    if (!prompt || !isConnected) return;
+    promptSentRef.current = true;
+    router.replace('/conversations');
+    sendMessage(decodeURIComponent(prompt));
+  }, [isConnected, searchParams, sendMessage, router]);
 
   // Auto-select the latest active session when sessions load.
   // Only run when currentSessionId is EXPLICITLY null (not yet set) and there are

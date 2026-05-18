@@ -32,8 +32,14 @@ export async function apiFetch<T>(
   if (!res.ok) {
     const body = (await res.json().catch(() => ({ message: res.statusText }))) as {
       message?: string;
+      errors?: { field: string; message: string }[];
     };
-    throw new ApiError(res.status, body.message ?? res.statusText);
+    // For 422 validation errors, surface the field-level messages so the user knows what to fix.
+    const detail =
+      Array.isArray(body.errors) && body.errors.length > 0
+        ? body.errors.map((e) => (e.field ? `${e.field}: ${e.message}` : e.message)).join('; ')
+        : (body.message ?? res.statusText);
+    throw new ApiError(res.status, detail);
   }
 
   const contentLength = res.headers.get('content-length');
