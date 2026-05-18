@@ -91,8 +91,7 @@ const GEMINI_SPEC: ProviderSpec = {
   displayName: 'Google Gemini',
   modelPrefixes: ['gemini-'],
   envKey: 'GEMINI_API_KEY',
-  defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/',
-  defaultModel: 'gemini-3-flash-preview',
+  defaultModel: 'gemini-2.5-flash',
   supportsTools: true,
   supportsThinking: false,
   pricing: [
