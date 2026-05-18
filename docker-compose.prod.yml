@@ -27,6 +27,7 @@ services:
     restart: unless-stopped
     environment:
       DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL:?LETSENCRYPT_EMAIL is required}
+      NGINX_PROXY_CONTAINER: clawix-nginx-proxy
     volumes_from:
       - nginx-proxy
     volumes:
