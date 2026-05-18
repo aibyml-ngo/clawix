@@ -58,6 +58,12 @@ export class AgentsController {
     return { success: true, data: configured };
   }
 
+  @Get('providers/:provider/models')
+  async getProviderModels(@Param('provider') provider: string) {
+    const models = await this.agentsService.fetchProviderModels(provider);
+    return { success: true, data: models };
+  }
+
   // IMPORTANT: literal path routes must come before :id parameter routes
   @Get('user-agents')
   listUserAgents(@Req() req: AuthRequest) {

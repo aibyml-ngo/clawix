@@ -13,6 +13,13 @@ import { AgentRunRepository } from '../db/agent-run.repository.js';
 import { UserAgentRepository } from '../db/user-agent.repository.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { NotificationFanoutService } from '../notifications/notifications.fanout.js';
+import { ProviderConfigService } from '../provider-config/provider-config.service.js';
+
+// Models to exclude from the dynamic list (embeddings, audio, image, etc.)
+const EXCLUDE_MODEL_PREFIXES = [
+  'text-embedding', 'tts-', 'whisper-', 'dall-e', 'davinci-',
+  'babbage-', 'curie-', 'ada-', 'cushman-',
+];
 
 @Injectable()
 export class AgentsService {
@@ -22,7 +29,44 @@ export class AgentsService {
     private readonly userAgentRepo: UserAgentRepository,
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationFanoutService,
+    private readonly providerConfigService: ProviderConfigService,
   ) {}
+
+  async fetchProviderModels(providerName: string): Promise<string[]> {
+    const { apiKey, apiBaseUrl } = await this.providerConfigService.resolveProvider(providerName);
+
+    // Anthropic has no public models endpoint — return known models
+    if (providerName === 'anthropic') {
+      return [
+        'claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5',
+        'claude-opus-4', 'claude-sonnet-4', 'claude-haiku-4',
+      ];
+    }
+
+    // Gemini
+    if (providerName === 'gemini') {
+      const base = apiBaseUrl?.replace(/\/$/, '') ?? 'https://generativelanguage.googleapis.com/v1beta';
+      const res = await fetch(`${base}/models?key=${apiKey}`);
+      if (!res.ok) return [];
+      const json = await res.json() as { models?: { name: string; supportedGenerationMethods?: string[] }[] };
+      return (json.models ?? [])
+        .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
+        .map((m) => m.name.replace('models/', ''))
+        .sort();
+    }
+
+    // OpenAI or OpenAI-compatible custom provider
+    const base = apiBaseUrl?.replace(/\/$/, '') ?? 'https://api.openai.com/v1';
+    const res = await fetch(`${base}/models`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!res.ok) return [];
+    const json = await res.json() as { data?: { id: string }[] };
+    return (json.data ?? [])
+      .map((m) => m.id)
+      .filter((id) => !EXCLUDE_MODEL_PREFIXES.some((prefix) => id.startsWith(prefix)))
+      .sort();
+  }
 
   async listAgents(
     pagination: PaginationInput,

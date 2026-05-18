@@ -60,8 +60,9 @@ function ProviderModelFields({
   const [selectedProvider, setSelectedProvider] = useState(
     defaultProvider ?? providers[0]?.name ?? '',
   );
+  const [dynamicModels, setDynamicModels] = useState<string[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
   const currentProvider = providers.find((p) => p.name === selectedProvider);
-  const models = currentProvider?.models ?? [];
 
   // Set default provider when providers load
   useEffect(() => {
@@ -69,6 +70,19 @@ function ProviderModelFields({
       setSelectedProvider(defaultProvider ?? providers[0]!.name);
     }
   }, [providers, defaultProvider, selectedProvider]);
+
+  // Fetch available models from the provider API when provider changes
+  useEffect(() => {
+    if (!selectedProvider) return;
+    setLoadingModels(true);
+    setDynamicModels([]);
+    authFetch<{ data: string[] }>(`/api/v1/agents/providers/${selectedProvider}/models`)
+      .then((res) => setDynamicModels(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setDynamicModels(currentProvider?.models ?? []))
+      .finally(() => setLoadingModels(false));
+  }, [selectedProvider]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const models = dynamicModels.length > 0 ? dynamicModels : (currentProvider?.models ?? []);
 
   return (
     <>
@@ -92,12 +106,15 @@ function ProviderModelFields({
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor={`${idPrefix}-model`}>Model</Label>
+        <Label htmlFor={`${idPrefix}-model`}>
+          Model
+          {loadingModels && <Loader2 className="ml-2 inline size-3 animate-spin text-muted-foreground" />}
+        </Label>
         <Input
           id={`${idPrefix}-model`}
           name="model"
           list={`${idPrefix}-model-suggestions`}
-          placeholder={currentProvider?.defaultModel || 'model-name'}
+          placeholder={loadingModels ? 'Loading models…' : (currentProvider?.defaultModel || 'model-name')}
           defaultValue={defaultModel ?? currentProvider?.defaultModel ?? ''}
           required
         />
@@ -109,7 +126,9 @@ function ProviderModelFields({
           </datalist>
         )}
         <p className="text-xs text-muted-foreground">
-          Type any model name. Predefined models appear as suggestions.
+          {loadingModels
+            ? 'Fetching available models from provider…'
+            : 'Type or select a model. Available models load automatically.'}
         </p>
       </div>
     </>
