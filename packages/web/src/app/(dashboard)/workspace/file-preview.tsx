@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatFileSize } from '@/lib/format';
+import { ImagePreview } from './image-preview';
 import type { FileContent } from '@clawix/shared';
 
 interface FilePreviewProps {
@@ -47,7 +48,7 @@ export function FilePreview({ file, isLoading, onClose, onEdit, onFullPreview }:
           </span>
         </div>
         <div className="flex items-center gap-1">
-          {onFullPreview && file.content !== null && (
+          {onFullPreview && (file.content !== null || file.type === 'image') && (
             <Button
               variant="ghost"
               size="icon"
@@ -78,14 +79,18 @@ export function FilePreview({ file, isLoading, onClose, onEdit, onFullPreview }:
       </CardHeader>
       <CardContent className="flex-1 overflow-auto p-4">
         {file.content === null ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-            <FileWarning className="size-8 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">
-              {file.truncated
-                ? 'File is too large to preview (> 1 MB)'
-                : 'Binary file — preview not available'}
-            </p>
-          </div>
+          file.type === 'image' && !file.truncated ? (
+            <ImagePreview path={file.path} alt={file.name} />
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+              <FileWarning className="size-8 text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground">
+                {file.truncated
+                  ? 'File is too large to preview (> 1 MB)'
+                  : 'Binary file — preview not available'}
+              </p>
+            </div>
+          )
         ) : file.type === 'markdown' ? (
           <div className="prose prose-sm dark:prose-invert max-w-none">
             <Markdown remarkPlugins={[remarkGfm]}>{file.content}</Markdown>

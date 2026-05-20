@@ -145,6 +145,7 @@ export class WorkspaceController {
   async downloadFile(
     @Req() req: { user: JwtPayload },
     @Query('path') filePath?: string,
+    @Query('inline') inline?: string,
     @Res() reply?: FastifyReply,
   ): Promise<void> {
     if (!filePath) {
@@ -154,8 +155,9 @@ export class WorkspaceController {
       req.user.sub,
       filePath,
     );
+    const disposition = inline === 'true' ? 'inline' : 'attachment';
     reply!.header('Content-Type', contentType);
-    reply!.header('Content-Disposition', `attachment; filename="${filename}"`);
+    reply!.header('Content-Disposition', `${disposition}; filename="${filename}"`);
     reply!.header('Content-Length', size);
     await reply!.send(stream);
   }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, ChevronRight, Folder, Pencil, X } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Folder, Pencil } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import mermaid from 'mermaid';
@@ -9,6 +9,7 @@ import { authFetch } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { formatFileSize } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
+import { ImagePreview } from './image-preview';
 import type { DirectoryListing, FileContent } from '@clawix/shared';
 import {
   Dialog,
@@ -545,7 +546,7 @@ export function FullPreviewDialog({ file, open, onOpenChange, onEdit }: FullPrev
           Full preview of {file.name} ({file.type}, {formatFileSize(file.size)})
         </DialogDescription>
         {/* Header */}
-        <div className="flex items-center gap-2 border-b px-6 py-4">
+        <div className="flex items-center gap-2 border-b py-4 pl-6 pr-14">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <span className="truncate text-lg font-semibold">{file.name}</span>
             <Badge variant="secondary" className="shrink-0">
@@ -570,27 +571,23 @@ export function FullPreviewDialog({ file, open, onOpenChange, onEdit }: FullPrev
                 <Pencil className="size-4" />
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8"
-              onClick={() => onOpenChange(false)}
-            >
-              <X className="size-4" />
-            </Button>
           </div>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-auto p-6">
           {file.content === null ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-              <p className="text-sm text-muted-foreground">
-                {file.truncated
-                  ? 'File is too large to preview (> 1 MB)'
-                  : 'Binary file — preview not available'}
-              </p>
-            </div>
+            file.type === 'image' && !file.truncated ? (
+              <ImagePreview path={file.path} alt={file.name} />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+                <p className="text-sm text-muted-foreground">
+                  {file.truncated
+                    ? 'File is too large to preview (> 1 MB)'
+                    : 'Binary file — preview not available'}
+                </p>
+              </div>
+            )
           ) : isMarkdown ? (
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <Markdown

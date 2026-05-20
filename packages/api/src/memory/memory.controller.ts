@@ -35,7 +35,7 @@ interface AuthenticatedRequest {
  * (visibility-gated by the service). Writes are admin + developer; viewer
  * is read-only.
  */
-@Controller('memory')
+@Controller('api/v1/memory')
 export class MemoryController {
   constructor(private readonly service: MemoryService) {}
 
