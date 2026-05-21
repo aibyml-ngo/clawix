@@ -94,6 +94,30 @@ const BINARY_TYPES: ReadonlySet<FileType> = new Set(['image', 'video', 'audio', 
 
 const EDITABLE_TYPES: ReadonlySet<FileType> = new Set(['text', 'code', 'markdown', 'json']);
 
+const MIME_TYPE_MAP: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.mov': 'video/quicktime',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
+  '.pdf': 'application/pdf',
+  '.zip': 'application/zip',
+  '.tar': 'application/x-tar',
+  '.gz': 'application/gzip',
+  '.rar': 'application/vnd.rar',
+  '.json': 'application/json',
+  '.md': 'text/markdown',
+  '.mdx': 'text/markdown',
+};
+
 @Injectable()
 export class WorkspaceService {
   constructor(private readonly userAgentRepo: UserAgentRepository) {}
@@ -385,22 +409,17 @@ export class WorkspaceService {
     if (stat.isDirectory()) throw new BadRequestException('Cannot download a directory');
     const resolved = sfs.resolve(filePath);
     const filename = path.basename(resolved);
+    const ext = path.extname(filename).toLowerCase();
     const type = WorkspaceService.detectFileType(filename);
-    const contentTypeMap: Partial<Record<string, string>> = {
-      image: 'image/*',
-      video: 'video/*',
-      audio: 'audio/*',
-      pdf: 'application/pdf',
-      archive: 'application/octet-stream',
-      json: 'application/json',
+    const fallbackByType: Partial<Record<string, string>> = {
       code: 'text/plain',
       text: 'text/plain',
-      markdown: 'text/markdown',
     };
+    const contentType = MIME_TYPE_MAP[ext] ?? fallbackByType[type] ?? 'application/octet-stream';
     return {
       stream: sfs.createReadStream(filePath),
       filename,
-      contentType: contentTypeMap[type] ?? 'application/octet-stream',
+      contentType,
       size: stat.size,
     };
   }

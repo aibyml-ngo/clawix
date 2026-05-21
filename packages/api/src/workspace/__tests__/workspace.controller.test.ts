@@ -261,7 +261,7 @@ describe('WorkspaceController', () => {
         send: vi.fn().mockResolvedValue(undefined),
       } as any;
 
-      await controller.downloadFile(mockReq, '/index.ts', mockReply);
+      await controller.downloadFile(mockReq, '/index.ts', undefined, mockReply);
 
       expect(mockService.downloadFile).toHaveBeenCalledWith('user-1', '/index.ts');
       expect(mockReply.header).toHaveBeenCalledWith('Content-Type', 'text/plain');
@@ -273,15 +273,37 @@ describe('WorkspaceController', () => {
       expect(mockReply.send).toHaveBeenCalledWith(mockStream);
     });
 
+    it('should use inline Content-Disposition when inline=true', async () => {
+      const mockStream = { pipe: vi.fn() } as any;
+      mockService.downloadFile.mockResolvedValue({
+        stream: mockStream,
+        filename: 'photo.png',
+        contentType: 'image/png',
+        size: 100,
+      });
+
+      const mockReply = {
+        header: vi.fn().mockReturnThis(),
+        send: vi.fn().mockResolvedValue(undefined),
+      } as any;
+
+      await controller.downloadFile(mockReq, '/photo.png', 'true', mockReply);
+
+      expect(mockReply.header).toHaveBeenCalledWith(
+        'Content-Disposition',
+        'inline; filename="photo.png"',
+      );
+    });
+
     it('should throw BadRequestException when path is missing', async () => {
       const mockReply = {
         header: vi.fn().mockReturnThis(),
         send: vi.fn().mockResolvedValue(undefined),
       } as any;
 
-      await expect(controller.downloadFile(mockReq, undefined, mockReply)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        controller.downloadFile(mockReq, undefined, undefined, mockReply),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

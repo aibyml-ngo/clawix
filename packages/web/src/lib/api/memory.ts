@@ -14,29 +14,29 @@ export interface MemoryItem {
 
 export const memoryApi = {
   list(scope: MemoryListScope): Promise<{ items: MemoryItem[] }> {
-    return authFetch(`/memory?scope=${encodeURIComponent(scope)}`);
+    return authFetch(`/api/v1/memory?scope=${encodeURIComponent(scope)}`);
   },
 
   read(id: string): Promise<MemoryItem> {
-    return authFetch(`/memory/${encodeURIComponent(id)}`);
+    return authFetch(`/api/v1/memory/${encodeURIComponent(id)}`);
   },
 
   create(input: CreateMemoryItemInput): Promise<MemoryItem> {
-    return authFetch('/memory', {
+    return authFetch('/api/v1/memory', {
       method: 'POST',
       body: JSON.stringify(input),
     });
   },
 
   update(id: string, input: UpdateMemoryItemInput): Promise<MemoryItem> {
-    return authFetch(`/memory/${encodeURIComponent(id)}`, {
+    return authFetch(`/api/v1/memory/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify(input),
     });
   },
 
   delete(id: string): Promise<void> {
-    return authFetch(`/memory/${encodeURIComponent(id)}`, {
+    return authFetch(`/api/v1/memory/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     });
   },
