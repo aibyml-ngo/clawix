@@ -22,7 +22,7 @@ import { HealthModule } from './health/index.js';
 import { AppExceptionFilter } from './filters/app-exception.filter.js';
 import { GroupsModule } from './groups/groups.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
-import { MemoryModule } from './memory/memory.module.js';
+import { WikiModule } from './wiki/wiki.module.js';
 import { MessagesModule } from './messages/index.js';
 import { ProfileModule } from './profile/index.js';
 import { PrismaModule } from './prisma/index.js';
@@ -61,7 +61,7 @@ import { PacksModule } from './packs/packs.module.js';
     ChatModule,
     GroupsModule,
     NotificationsModule,
-    MemoryModule,
+    WikiModule,
     MessagesModule,
     TokensModule,
     AuditModule,

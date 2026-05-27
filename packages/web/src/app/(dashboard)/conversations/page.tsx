@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { PanelLeftClose, PanelLeftOpen, Square } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Square, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authFetch } from '@/lib/auth';
 import { useChat } from './use-chat';
@@ -26,6 +26,9 @@ function ConversationsInner() {
 
   // Initialize to false for SSR, then sync from localStorage after hydration
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Error banner dismissal — flipped back to false whenever the error string
+  // changes (i.e. a fresh error always re-displays).
+  const [errorDismissed, setErrorDismissed] = useState(false);
 
   // Sync sidebar state from localStorage after mount (avoids hydration mismatch)
   useEffect(() => {
@@ -58,6 +61,9 @@ function ConversationsInner() {
     hasMoreSessions,
     selectSession,
     sendMessage,
+    retryMessage,
+    deleteSession,
+    failedTmpIds,
     startNewChat,
     loadMore,
     loadMoreSessions,
@@ -75,6 +81,11 @@ function ConversationsInner() {
     router.replace('/conversations');
     sendMessage(decodeURIComponent(prompt));
   }, [isConnected, searchParams, sendMessage, router]);
+
+  // Reset banner dismissal whenever a fresh error string arrives so it re-displays.
+  useEffect(() => {
+    setErrorDismissed(false);
+  }, [error]);
 
   // Auto-select the latest active session when sessions load.
   // Only run when currentSessionId is EXPLICITLY null (not yet set) and there are
@@ -143,6 +154,7 @@ function ConversationsInner() {
           onNewChat={(archiveCurrent) => void startNewChat(archiveCurrent)}
           onLoadMore={() => void loadMoreSessions()}
           onSessionUpdated={() => void refreshSessions()}
+          onDelete={(id) => deleteSession(id)}
         />
       </div>
 
@@ -168,9 +180,22 @@ function ConversationsInner() {
             {isArchived && <span className="ml-2 text-xs opacity-60">(Archived)</span>}
           </span>
         </div>
-        {error && (
-          <div className="mx-6 mt-4 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            {error}
+        {error && !errorDismissed && (
+          <div
+            role="alert"
+            className="mx-6 mt-4 flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          >
+            <span className="flex-1">{error}</span>
+            <button
+              type="button"
+              aria-label="Dismiss error"
+              className="-mr-1 -mt-0.5 rounded-sm p-1 text-destructive/80 hover:bg-destructive/10 hover:text-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50"
+              onClick={() => {
+                setErrorDismissed(true);
+              }}
+            >
+              <X className="size-4" aria-hidden="true" />
+            </button>
           </div>
         )}
 
@@ -184,6 +209,10 @@ function ConversationsInner() {
               hasMore={hasMore}
               onLoadMore={loadMore}
               toolProgressMode={toolProgressMode}
+              failedIds={failedTmpIds}
+              onRetry={(id) => {
+                retryMessage(id);
+              }}
             />
             {isTyping && (
               <div className="flex justify-center py-1">

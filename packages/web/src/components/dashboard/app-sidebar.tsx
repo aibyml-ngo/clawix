@@ -7,13 +7,13 @@ import { useAuth } from '@/components/auth-provider';
 import {
   BookOpen,
   Bot,
+  CalendarClock,
   ChevronRight,
   ChevronsUpDown,
   Coins,
   Compass,
   CreditCard,
   FolderOpen,
-  Notebook,
   MonitorPlay,
   LogOut,
   MessageSquare,
@@ -54,6 +54,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useUnreadChat } from '@/components/dashboard/unread-chat-provider';
 
 const platformItems = [
   {
@@ -86,6 +87,11 @@ const platformItems = [
     icon: Bot,
     href: '/agents',
   },
+  {
+    title: 'Schedules',
+    icon: CalendarClock,
+    href: '/tasks',
+  },
 ];
 
 interface NavItem {
@@ -97,7 +103,6 @@ interface NavItem {
 
 const communityItems: readonly NavItem[] = [
   { title: 'Groups', href: '/governance/groups', icon: Users },
-  { title: 'Memory', href: '/memory', icon: Notebook },
 ];
 
 const governanceItems: readonly NavItem[] = [
@@ -111,6 +116,7 @@ export function AppSidebar() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { resolvedTheme, setTheme } = useTheme();
+  const { count: unreadChat } = useUnreadChat();
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -187,21 +193,30 @@ export function AppSidebar() {
             Workspace
           </SidebarGroupLabel>
           <SidebarMenu>
-            {platformItems.map((item) => (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={isActive(item.href)}
-                  tooltip={item.title}
-                  className={navButtonClass}
-                >
-                  <Link href={item.href}>
-                    <item.icon />
-                    <span>{item.title}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {platformItems.map((item) => {
+              const showUnreadDot = item.title === 'Conversations' && unreadChat > 0;
+              return (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.href)}
+                    tooltip={showUnreadDot ? `${item.title} (${unreadChat} unread)` : item.title}
+                    className={navButtonClass}
+                  >
+                    <Link href={item.href} className="relative">
+                      <item.icon />
+                      <span>{item.title}</span>
+                      {showUnreadDot && (
+                        <span
+                          aria-label={`${unreadChat} unread chat message${unreadChat === 1 ? '' : 's'}`}
+                          className="ml-auto inline-flex size-2 rounded-full bg-destructive shadow-[0_0_0_2px_hsl(var(--sidebar-background))]"
+                        />
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
           </SidebarMenu>
         </SidebarGroup>
 
@@ -225,6 +240,19 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={isActive('/wiki')}
+                tooltip="Wiki"
+                className={navButtonClass}
+              >
+                <Link href="/wiki">
+                  <BookOpen />
+                  <span>Wiki</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
 

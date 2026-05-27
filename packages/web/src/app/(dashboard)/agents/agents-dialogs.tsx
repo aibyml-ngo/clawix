@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,126 +14,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { authFetch } from '@/lib/auth';
+import { FieldError } from '@/components/ui/field-error';
+import { agentFormSchema, parseForm, type FieldErrors } from '@/lib/validation';
+import { ProviderModelFields, agentFormInput, useProviders } from './agent-form-fields';
 import type { ApiAgent } from './agents-list';
-
-// ------------------------------------------------------------------ //
-//  Provider data                                                      //
-// ------------------------------------------------------------------ //
-
-interface ProviderInfo {
-  name: string;
-  displayName: string;
-  defaultModel: string;
-  models: string[];
-}
-
-function useProviders() {
-  const [providers, setProviders] = useState<ProviderInfo[]>([]);
-
-  useEffect(() => {
-    void authFetch<{ data: ProviderInfo[] }>('/api/v1/agents/providers')
-      .then((res) => {
-        setProviders(Array.isArray(res.data) ? res.data : []);
-      })
-      .catch(() => {});
-  }, []);
-
-  return providers;
-}
-
-// ------------------------------------------------------------------ //
-//  Provider + Model selects (linked)                                  //
-// ------------------------------------------------------------------ //
-
-function ProviderModelFields({
-  providers,
-  defaultProvider,
-  defaultModel,
-  idPrefix,
-}: {
-  providers: ProviderInfo[];
-  defaultProvider?: string;
-  defaultModel?: string;
-  idPrefix: string;
-}) {
-  const [selectedProvider, setSelectedProvider] = useState(
-    defaultProvider ?? providers[0]?.name ?? '',
-  );
-  const [dynamicModels, setDynamicModels] = useState<string[]>([]);
-  const [loadingModels, setLoadingModels] = useState(false);
-  const currentProvider = providers.find((p) => p.name === selectedProvider);
-
-  // Set default provider when providers load
-  useEffect(() => {
-    if (!selectedProvider && providers.length > 0) {
-      setSelectedProvider(defaultProvider ?? providers[0]!.name);
-    }
-  }, [providers, defaultProvider, selectedProvider]);
-
-  // Fetch available models from the provider API when provider changes
-  useEffect(() => {
-    if (!selectedProvider) return;
-    setLoadingModels(true);
-    setDynamicModels([]);
-    authFetch<{ data: string[] }>(`/api/v1/agents/providers/${selectedProvider}/models`)
-      .then((res) => setDynamicModels(Array.isArray(res.data) ? res.data : []))
-      .catch(() => setDynamicModels(currentProvider?.models ?? []))
-      .finally(() => setLoadingModels(false));
-  }, [selectedProvider]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const models = dynamicModels.length > 0 ? dynamicModels : (currentProvider?.models ?? []);
-
-  return (
-    <>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={`${idPrefix}-provider`}>Provider</Label>
-        <select
-          name="provider"
-          id={`${idPrefix}-provider`}
-          className="rounded-md border bg-background px-3 py-2 text-sm"
-          value={selectedProvider}
-          onChange={(e) => {
-            setSelectedProvider(e.target.value);
-          }}
-        >
-          {providers.map((p) => (
-            <option key={p.name} value={p.name}>
-              {p.displayName}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={`${idPrefix}-model`}>
-          Model
-          {loadingModels && <Loader2 className="ml-2 inline size-3 animate-spin text-muted-foreground" />}
-        </Label>
-        <Input
-          id={`${idPrefix}-model`}
-          name="model"
-          list={`${idPrefix}-model-suggestions`}
-          placeholder={loadingModels ? 'Loading models…' : (currentProvider?.defaultModel || 'model-name')}
-          defaultValue={defaultModel ?? currentProvider?.defaultModel ?? ''}
-          required
-        />
-        {models.length > 0 && (
-          <datalist id={`${idPrefix}-model-suggestions`}>
-            {models.map((m) => (
-              <option key={m} value={m} />
-            ))}
-          </datalist>
-        )}
-        <p className="text-xs text-muted-foreground">
-          {loadingModels
-            ? 'Fetching available models from provider…'
-            : 'Type or select a model. Available models load automatically.'}
-        </p>
-      </div>
-    </>
-  );
-}
 
 // ------------------------------------------------------------------ //
 //  Create Agent Dialog                                                //
@@ -152,6 +36,7 @@ export function CreateAgentDialog({
 }) {
   const providers = useProviders();
   const [streamingEnabled, setStreamingEnabled] = useState(false);
+  const [errors, setErrors] = useState<FieldErrors>({});
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -167,13 +52,28 @@ export function CreateAgentDialog({
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             fd.set('streamingEnabled', String(streamingEnabled));
+            const parsed = parseForm(agentFormSchema, agentFormInput(fd));
+            if (!parsed.success) {
+              setErrors(parsed.fieldErrors);
+              return;
+            }
+            setErrors({});
             onSubmit(fd);
           }}
           className="flex flex-col gap-4"
+          noValidate
         >
           <div className="flex flex-col gap-2">
             <Label htmlFor="create-name">Name</Label>
-            <Input id="create-name" name="name" placeholder="Research Assistant" required />
+            <Input
+              id="create-name"
+              name="name"
+              placeholder="Research Assistant"
+              maxLength={100}
+              aria-invalid={errors['name'] ? true : undefined}
+              required
+            />
+            <FieldError message={errors['name']} />
           </div>
 
           <div className="flex flex-col gap-2">
@@ -182,9 +82,11 @@ export function CreateAgentDialog({
               id="create-description"
               name="description"
               rows={2}
+              maxLength={500}
               className="rounded-md border bg-background px-3 py-2 text-sm"
               placeholder="Optional description of this agent"
             />
+            <FieldError message={errors['description']} />
           </div>
 
           <div className="flex flex-col gap-2">
@@ -195,22 +97,27 @@ export function CreateAgentDialog({
               rows={6}
               className="rounded-md border bg-background px-3 py-2 text-sm"
               placeholder="You are a helpful AI assistant..."
+              aria-invalid={errors['systemPrompt'] ? true : undefined}
               required
             />
+            <FieldError message={errors['systemPrompt']} />
           </div>
 
           {/* Role is always worker for user-created agents; primary is system-only */}
           <input type="hidden" name="role" value="worker" />
 
-          <ProviderModelFields providers={providers} idPrefix="create" />
+          <ProviderModelFields providers={providers} idPrefix="create" errors={errors} />
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="create-apiBaseUrl">API Base URL</Label>
             <Input
               id="create-apiBaseUrl"
               name="apiBaseUrl"
+              type="url"
               placeholder="https://api.example.com/v1"
+              aria-invalid={errors['apiBaseUrl'] ? true : undefined}
             />
+            <FieldError message={errors['apiBaseUrl']} />
             <p className="text-xs text-muted-foreground">
               Optional. Override the default API endpoint for this provider.
             </p>
@@ -224,7 +131,9 @@ export function CreateAgentDialog({
               type="number"
               defaultValue={100000}
               min={1000}
+              aria-invalid={errors['maxTokensPerRun'] ? true : undefined}
             />
+            <FieldError message={errors['maxTokensPerRun']} />
           </div>
 
           <div className="flex flex-col gap-2">
@@ -287,6 +196,7 @@ export function EditAgentDialog({
 }) {
   const providers = useProviders();
   const [streamingEnabled, setStreamingEnabled] = useState(agent?.streamingEnabled ?? false);
+  const [errors, setErrors] = useState<FieldErrors>({});
 
   if (!agent) return null;
 
@@ -302,13 +212,28 @@ export function EditAgentDialog({
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             fd.set('streamingEnabled', String(streamingEnabled));
+            const parsed = parseForm(agentFormSchema, agentFormInput(fd));
+            if (!parsed.success) {
+              setErrors(parsed.fieldErrors);
+              return;
+            }
+            setErrors({});
             onSubmit(agent.id, fd);
           }}
           className="flex flex-col gap-4"
+          noValidate
         >
           <div className="flex flex-col gap-2">
             <Label htmlFor="edit-name">Name</Label>
-            <Input id="edit-name" name="name" defaultValue={agent.name} required />
+            <Input
+              id="edit-name"
+              name="name"
+              defaultValue={agent.name}
+              maxLength={100}
+              aria-invalid={errors['name'] ? true : undefined}
+              required
+            />
+            <FieldError message={errors['name']} />
           </div>
 
           <div className="flex flex-col gap-2">
@@ -317,9 +242,11 @@ export function EditAgentDialog({
               id="edit-description"
               name="description"
               rows={2}
+              maxLength={500}
               className="rounded-md border bg-background px-3 py-2 text-sm"
               defaultValue={agent.description}
             />
+            <FieldError message={errors['description']} />
           </div>
 
           <div className="flex flex-col gap-2">
@@ -330,8 +257,10 @@ export function EditAgentDialog({
               rows={6}
               className="rounded-md border bg-background px-3 py-2 text-sm"
               defaultValue={agent.systemPrompt}
+              aria-invalid={errors['systemPrompt'] ? true : undefined}
               required
             />
+            <FieldError message={errors['systemPrompt']} />
           </div>
 
           {/* Role cannot be changed; primary is system-only, workers stay workers */}
@@ -348,6 +277,7 @@ export function EditAgentDialog({
             defaultProvider={agent.provider}
             defaultModel={agent.model}
             idPrefix="edit"
+            errors={errors}
           />
 
           <div className="flex flex-col gap-2">
@@ -355,9 +285,12 @@ export function EditAgentDialog({
             <Input
               id="edit-apiBaseUrl"
               name="apiBaseUrl"
+              type="url"
               defaultValue={agent.apiBaseUrl ?? ''}
               placeholder="https://api.example.com/v1"
+              aria-invalid={errors['apiBaseUrl'] ? true : undefined}
             />
+            <FieldError message={errors['apiBaseUrl']} />
             <p className="text-xs text-muted-foreground">
               Optional. Override the default API endpoint for this provider.
             </p>
@@ -371,7 +304,9 @@ export function EditAgentDialog({
               type="number"
               defaultValue={agent.maxTokensPerRun ?? 100000}
               min={1000}
+              aria-invalid={errors['maxTokensPerRun'] ? true : undefined}
             />
+            <FieldError message={errors['maxTokensPerRun']} />
           </div>
 
           {agent.role !== 'primary' && (
