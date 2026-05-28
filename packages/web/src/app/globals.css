@@ -23,6 +23,16 @@
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  /* Clawix landing brand palette (from v1 reference) */
+  --color-clawix-bg: var(--clawix-bg-light);
+  --color-clawix-primary: var(--clawix-primary);
+  --color-clawix-accent: var(--clawix-accent);
+  --color-clawix-accent-secondary: var(--clawix-accent-secondary);
+  --color-clawix-muted: var(--clawix-muted);
+  --color-clawix-cta: var(--clawix-cta);
+  --color-clawix-teal: var(--clawix-teal-dark);
+  --color-clawix-highlight: var(--clawix-highlight);
+  --color-clawix-success: var(--clawix-success);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -31,6 +41,16 @@
 
 :root {
   --radius: 0.625rem;
+  /* Clawix landing brand palette (from v1 reference) */
+  --clawix-bg-light: #ecfefc;
+  --clawix-primary: #090eb3;
+  --clawix-accent: #008be9;
+  --clawix-accent-secondary: #4fc4f1;
+  --clawix-muted: #93a7d7;
+  --clawix-cta: #0054c2;
+  --clawix-teal-dark: #1574a4;
+  --clawix-highlight: #aa5eda;
+  --clawix-success: #17cad2;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);

@@ -1004,6 +1004,118 @@ export const en = {
     providerDeleteError: 'Failed to delete provider',
   },
 
+  home: {
+    brand: 'AIbyML.com Clawix',
+    nav: {
+      features: 'Features',
+      howItWorks: 'How it works',
+      faq: 'FAQ',
+      signIn: 'Sign in',
+      getStarted: 'Get Started',
+      openMenu: 'Open menu',
+      closeMenu: 'Close menu',
+    },
+    footer: {
+      blurb: 'Self-hosted AI agent orchestration platform.',
+      github: 'GitHub',
+      copyright: '© {year} AIbyML.com Clawix',
+    },
+    hero: {
+      headline: 'AI Agents That Actually Work — In Real Environments',
+      subheadline:
+        'Build, run, and control AI agents reliably with Clawix — a self-hosted platform designed for real workflows, not just demos.',
+      ctaPrimary: 'Get Started',
+      ctaSecondary: 'View Demo',
+      ctaGithub: 'Explore GitHub',
+    },
+    problem: {
+      title: 'Most AI Breaks in Real Work',
+      description:
+        'AI demos often look impressive, but fail when applied to real-world environments. They lack control, reliability, and scalability.',
+      chaosLabel: 'Typical AI Tools',
+      structuredLabel: 'Clawix',
+    },
+    positioning: {
+      title: 'Not Another AI Tool — A System That Makes AI Work',
+      description:
+        'Clawix is not a chatbot or automation tool. It enables organizations to run AI as part of real operations — reliably, securely, and at scale.',
+    },
+    pillars: {
+      title: 'Built for Production',
+      control: {
+        title: 'Control & Governance',
+        description:
+          'Role-based access, audit logs, and secure execution. Full visibility into what your AI agents do.',
+        features: ['Role-based access', 'Audit logs', 'Secure execution'],
+      },
+      execution: {
+        title: 'Reliable Execution',
+        description:
+          'Multi-agent workflows with structured orchestration and built-in failure handling.',
+        features: ['Multi-agent workflows', 'Structured orchestration', 'Failure handling'],
+      },
+      ownership: {
+        title: 'Own Your AI',
+        description:
+          'Self-hosted, no vendor lock-in, multi-provider flexibility. Your infrastructure, your rules.',
+        features: ['Self-hosted', 'No vendor lock-in', 'Multi-provider'],
+      },
+    },
+    howItWorks: {
+      title: 'From Task to System',
+      steps: [
+        { number: '1', title: 'Define Workflow', description: 'Describe what your agents should accomplish' },
+        { number: '2', title: 'Assign Agents', description: 'Select and configure specialized agents' },
+        { number: '3', title: 'Orchestrate Execution', description: 'Agents collaborate in isolated containers' },
+        { number: '4', title: 'Monitor & Control', description: 'Full observability with real-time logs' },
+      ],
+    },
+    demo: {
+      title: 'See Clawix in Action',
+      description: 'Watch how Clawix orchestrates AI agents in a real workflow.',
+      cta: 'Watch Full Demo',
+    },
+    enterprise: {
+      title: 'AI You Can Trust at Scale',
+      description:
+        'Built for organizations that need governance, security, and flexible deployment.',
+      highlights: ['Governance-first design', 'Secure execution', 'Flexible deployment'],
+      cta: 'Talk to Us',
+    },
+    github: {
+      title: 'Open. Transparent. Extensible.',
+      description:
+        'Clawix is MIT-licensed and open source. Inspect the code, contribute, or fork it.',
+      cta: 'Explore on GitHub',
+      stats: { license: 'MIT License', stars: 'GitHub Stars' },
+    },
+    faq: {
+      title: 'Frequently Asked Questions',
+      description: 'Everything you need to know about Clawix.',
+      items: [
+        { question: 'What is Clawix?', answer: 'Clawix is an open source, self-hosted multi-agent AI orchestration platform designed for secure AI workflow execution, governance, memory management, and scalable agent collaboration inside isolated Docker containers.' },
+        { question: 'Who is Clawix built for?', answer: 'AI consultants building enterprise AI workflows, AI enthusiasts experimenting with autonomous agents, junior developers learning AI orchestration and infrastructure, and organizations requiring private and governable AI systems.' },
+        { question: 'What makes Clawix different from other AI agent frameworks?', answer: 'Clawix focuses on production-grade orchestration with container-isolated agents, self-hosted deployment, governance and auditability, multi-agent collaboration, multi-provider AI support, persistent memory and workspaces, and role-based access control.' },
+        { question: 'Is Clawix open source?', answer: 'Yes. Clawix is publicly available as an open source project under the MIT license.' },
+        { question: 'Which AI providers are supported?', answer: 'Available providers include Anthropic Claude, OpenAI GPT, Z.AI Coding, Kimi and OpenAI-compatible APIs. Planned providers include Gemini, DeepSeek, Azure OpenAI, and OpenRouter.' },
+        { question: 'Can I use local LLMs with Clawix?', answer: 'Yes. Clawix supports OpenAI-compatible endpoints such as Ollama, vLLM, and self-hosted inference APIs.' },
+        { question: 'Does Clawix require Docker?', answer: 'Yes. Docker is required because every AI agent runs inside its own isolated container for security, sandboxing, and resource management.' },
+        { question: 'How do I install Clawix?', answer: 'Clone the repository, start Docker Desktop, and run: pnpm run install:clawix. The installer automatically configures environment variables, builds Docker images, and starts required services.' },
+        { question: 'How are API keys and secrets protected?', answer: 'Provider API keys and secrets are encrypted using AES-256-GCM encryption and stored securely on the server.' },
+        { question: 'What governance features does Clawix provide?', answer: 'Governance features include audit logs, token budgets, structured logging, Prometheus metrics, scoped memory controls, and role-based access control (RBAC).' },
+        { question: 'What is the scoped memory system?', answer: 'Clawix supports private memory, group memory, and organization-wide memory. This enables AI agents to retain contextual knowledge across workflows and teams.' },
+        { question: 'What features are planned for the future?', answer: 'Planned roadmap items include WhatsApp integration, Slack integration, skill marketplace, advanced token analytics, multi-region deployment, and additional AI provider integrations.' },
+      ],
+    },
+    finalCta: {
+      title: 'Move from Experiment to Production',
+      description: 'Stop building AI demos. Start deploying AI systems.',
+      ctaPrimary: 'Get Started',
+      ctaCommunity: 'Join Community',
+      ctaWorkshop: 'Attend Workshop',
+    },
+  },
+
   landing: {
     nav: {
       signIn: 'Sign in',

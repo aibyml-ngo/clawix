@@ -993,6 +993,113 @@ export const zhHant: Dictionary = {
     providerDeleteError: '刪除供應商失敗',
   },
 
+  home: {
+    brand: 'AIbyML.com Clawix',
+    nav: {
+      features: '功能',
+      howItWorks: '運作方式',
+      faq: '常見問題',
+      signIn: '登入',
+      getStarted: '開始使用',
+      openMenu: '開啟選單',
+      closeMenu: '關閉選單',
+    },
+    footer: {
+      blurb: '自行託管的 AI 代理編排平台。',
+      github: 'GitHub',
+      copyright: '© {year} AIbyML.com Clawix',
+    },
+    hero: {
+      headline: '真正能用的 AI 代理 —— 在真實環境中運作',
+      subheadline:
+        '透過 Clawix 可靠地建立、執行並操控 AI 代理 —— 一個為真實工作流程而設、可自行託管的平台，而非僅供示範。',
+      ctaPrimary: '立即開始',
+      ctaSecondary: '觀看示範',
+      ctaGithub: '探索 GitHub',
+    },
+    problem: {
+      title: '大多數 AI 一到真實工作就失靈',
+      description:
+        'AI 示範往往令人印象深刻，但應用到真實環境時卻會失效。它們缺乏控制、可靠性與擴展能力。',
+      chaosLabel: '一般 AI 工具',
+      structuredLabel: 'Clawix',
+    },
+    positioning: {
+      title: '不只是另一個 AI 工具 —— 而是讓 AI 真正運作的系統',
+      description:
+        'Clawix 並非聊天機械人或自動化工具。它讓組織將 AI 融入真實營運之中 —— 穩定、安全，並可大規模擴展。',
+    },
+    pillars: {
+      title: '為生產環境而建',
+      control: {
+        title: '控制與治理',
+        description: '角色型存取、稽核日誌與安全執行。全面掌握 AI 代理的一舉一動。',
+        features: ['角色型存取', '稽核日誌', '安全執行'],
+      },
+      execution: {
+        title: '可靠執行',
+        description: '多代理工作流程，配備結構化編排與內建故障處理。',
+        features: ['多代理工作流程', '結構化編排', '故障處理'],
+      },
+      ownership: {
+        title: '完全掌控你的 AI',
+        description: '自行託管、無供應商鎖定、多供應商彈性。你的基礎設施，你的規則。',
+        features: ['自行託管', '無供應商鎖定', '多供應商'],
+      },
+    },
+    howItWorks: {
+      title: '從任務到系統',
+      steps: [
+        { number: '1', title: '定義工作流程', description: '描述你的代理需要完成的工作' },
+        { number: '2', title: '指派代理', description: '挑選並設定專門的代理' },
+        { number: '3', title: '編排執行', description: '代理在隔離的容器中協作' },
+        { number: '4', title: '監控與操控', description: '完整的可觀測性，附即時日誌' },
+      ],
+    },
+    demo: {
+      title: '實際體驗 Clawix',
+      description: '觀看 Clawix 如何在真實工作流程中協調 AI 代理。',
+      cta: '觀看完整示範',
+    },
+    enterprise: {
+      title: '值得信賴的規模化 AI',
+      description: '專為需要治理、安全性與彈性部署的組織而打造。',
+      highlights: ['治理優先的設計', '安全的執行環境', '彈性部署'],
+      cta: '與我們聯絡',
+    },
+    github: {
+      title: '開放、透明、可擴展。',
+      description: 'Clawix 採用 MIT 授權並開源。你可以檢視程式碼、參與貢獻或進行分支。',
+      cta: '前往 GitHub 探索',
+      stats: { license: 'MIT 授權', stars: 'GitHub 星標' },
+    },
+    faq: {
+      title: '常見問題',
+      description: '關於 Clawix 你需要了解的一切。',
+      items: [
+        { question: 'Clawix 是什麼？', answer: 'Clawix 是一個開源、自行託管的多代理 AI 編排平台，專為安全的 AI 工作流程執行、治理、記憶管理，以及在隔離的 Docker 容器內進行可擴展的代理協作而設計。' },
+        { question: 'Clawix 是為誰打造的？', answer: '適用於建構企業 AI 工作流程的 AI 顧問、實驗自主代理的 AI 愛好者、學習 AI 編排與基礎架構的初階開發者，以及需要私有且可治理 AI 系統的組織。' },
+        { question: 'Clawix 與其他 AI 代理框架有何不同？', answer: 'Clawix 專注於生產級別的編排，具備容器隔離的代理、自行託管的部署、治理與可稽核性、多代理協作、多供應商 AI 支援、持久化記憶與工作區，以及角色型存取控制。' },
+        { question: 'Clawix 是開源的嗎？', answer: '是的。Clawix 以 MIT 授權作為開源專案公開提供。' },
+        { question: '支援哪些 AI 供應商？', answer: '可用的供應商包括 Anthropic Claude、OpenAI GPT、Z.AI Coding、Kimi 以及 OpenAI 相容的 API。規劃中的供應商包括 Gemini、DeepSeek、Azure OpenAI 與 OpenRouter。' },
+        { question: '我可以在 Clawix 中使用本地 LLM 嗎？', answer: '可以。Clawix 支援 OpenAI 相容的端點，例如 Ollama、vLLM 以及自行託管的推論 API。' },
+        { question: 'Clawix 需要 Docker 嗎？', answer: '需要。Docker 是必要的，因為每個 AI 代理都運行在各自隔離的容器中，以提供安全性、沙箱隔離與資源管理。' },
+        { question: '我該如何安裝 Clawix？', answer: '複製儲存庫、啟動 Docker Desktop，然後執行：pnpm run install:clawix。安裝程式會自動配置環境變數、建構 Docker 映像檔，並啟動所需的服務。' },
+        { question: 'API 金鑰與密鑰如何受到保護？', answer: '供應商的 API 金鑰與密鑰透過 AES-256-GCM 加密進行加密，並安全地儲存於伺服器上。' },
+        { question: 'Clawix 提供哪些治理功能？', answer: '治理功能包括稽核日誌、權杖預算、結構化日誌記錄、Prometheus 指標、範圍化記憶控制，以及角色型存取控制（RBAC）。' },
+        { question: '範圍化記憶系統是什麼？', answer: 'Clawix 支援私有記憶、群組記憶與組織範圍記憶。這使 AI 代理能夠在各個工作流程與團隊之間保留情境知識。' },
+        { question: '未來規劃了哪些功能？', answer: '規劃中的藍圖項目包括 WhatsApp 整合、Slack 整合、技能市集、進階權杖分析、多區域部署，以及額外的 AI 供應商整合。' },
+      ],
+    },
+    finalCta: {
+      title: '從實驗邁向正式生產',
+      description: '別再打造 AI 示範。開始部署 AI 系統。',
+      ctaPrimary: '立即開始',
+      ctaCommunity: '加入社群',
+      ctaWorkshop: '參加工作坊',
+    },
+  },
+
   landing: {
     nav: {
       signIn: '登入',
