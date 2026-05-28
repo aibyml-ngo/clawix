@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { Globe, Plus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/i18n';
 import {
   extractText,
   freeFormTags,
@@ -49,16 +50,17 @@ export function KanbanBoard({
   onOpenCard,
   onCreateInDomain,
 }: Props) {
+  const { t } = useLanguage();
   const grouped = useMemo(() => groupByDomain(items), [items]);
 
   if (grouped.size === 0) {
     return (
       <div className="flex min-h-[calc(100vh-14rem)] flex-col items-center justify-center gap-3 rounded-md border border-dashed">
-        <p className="text-sm text-muted-foreground">No memory yet.</p>
+        <p className="text-sm text-muted-foreground">{t('memoryUi.emptyNoMemory')}</p>
         {canMutate && (
           <Button size="sm" onClick={() => onCreateInDomain(undefined)}>
             <Plus className="mr-1 size-4" />
-            New memory
+            {t('memoryUi.newMemory')}
           </Button>
         )}
       </div>
@@ -81,10 +83,10 @@ export function KanbanBoard({
 
       {canMutate && (
         <div className="flex w-72 shrink-0 flex-col items-center justify-start gap-2 rounded-md border border-dashed p-3">
-          <p className="text-xs text-muted-foreground">Add a new memory in a new domain</p>
+          <p className="text-xs text-muted-foreground">{t('memoryUi.addInNewDomain')}</p>
           <Button size="sm" variant="outline" onClick={() => onCreateInDomain(undefined)}>
             <Plus className="mr-1 size-4" />
-            New domain
+            {t('memoryUi.newDomain')}
           </Button>
         </div>
       )}
@@ -107,6 +109,7 @@ function Column({
   onOpenCard: (item: MemoryItem) => void;
   onCreateInDomain: (domain: string | undefined) => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="flex w-72 shrink-0 flex-col gap-3 rounded-md border bg-muted/30 p-3">
       <div className="flex items-center justify-between border-b border-border/50 pb-2">
@@ -122,7 +125,7 @@ function Column({
             variant="ghost"
             className="size-6"
             onClick={() => onCreateInDomain(domain === 'untagged' ? undefined : domain)}
-            aria-label={`Add memory to ${domain}`}
+            aria-label={t('memoryUi.addMemoryToDomain', { domain })}
           >
             <Plus className="size-4" />
           </Button>
@@ -144,8 +147,9 @@ function Column({
 }
 
 function Card({ item, scope, onClick }: { item: MemoryItem; scope: Scope; onClick: () => void }) {
+  const { t } = useLanguage();
   const text = extractText(item.content);
-  const firstLine = text.split('\n')[0]?.slice(0, 80) ?? '(empty)';
+  const firstLine = text.split('\n')[0]?.slice(0, 80) ?? t('memoryUi.emptyCard');
   const tags = freeFormTags(item);
 
   return (
@@ -156,17 +160,20 @@ function Card({ item, scope, onClick }: { item: MemoryItem; scope: Scope; onClic
         'group flex cursor-pointer flex-col gap-1.5 rounded-md border p-2.5 text-left text-sm transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02]',
         SCOPE_CLASSES[scope],
       )}
-      aria-label={`${scope}-scoped memory`}
+      aria-label={t('memoryUi.scopedMemoryAria', { scope: t(`memoryUi.scope.${scope}`) })}
     >
       <div className="flex items-start justify-between gap-2">
         <span className="line-clamp-2 flex-1 font-medium">{firstLine}</span>
         {scope === 'org' ? (
           <Globe
             className="size-3.5 shrink-0 text-amber-500"
-            aria-label="shared with organization"
+            aria-label={t('memoryUi.sharedWithOrgAria')}
           />
         ) : scope === 'group' ? (
-          <Users className="size-3.5 shrink-0 text-sky-500" aria-label="shared via group" />
+          <Users
+            className="size-3.5 shrink-0 text-sky-500"
+            aria-label={t('memoryUi.sharedViaGroupAria')}
+          />
         ) : null}
       </div>
 

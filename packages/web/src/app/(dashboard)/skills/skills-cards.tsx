@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { useLanguage } from '@/i18n';
 
 export interface Skill {
   name: string;
@@ -31,6 +32,7 @@ export function dirNameFromPath(skillPath: string): string {
 }
 
 export function BuiltinCard({ skill, onPreview }: { skill: Skill; onPreview?: () => void }) {
+  const { t } = useLanguage();
   return (
     <Card
       role={onPreview ? 'button' : undefined}
@@ -50,7 +52,7 @@ export function BuiltinCard({ skill, onPreview }: { skill: Skill; onPreview?: ()
             <BookOpen className="size-5 text-sky-400" />
           </div>
           <Badge variant="outline" className="border-sky-500/40 bg-sky-500/15 text-sky-400">
-            builtin
+            {t('skillsUi.badgeBuiltin')}
           </Badge>
         </div>
         <CardTitle className="text-base">{skill.name}</CardTitle>
@@ -78,6 +80,7 @@ export function CustomCard({
   onRename: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <Card
       role={onPreview ? 'button' : undefined}
@@ -97,7 +100,7 @@ export function CustomCard({
             <BookOpen className="size-5 text-primary" />
           </div>
           <Badge variant="outline" className="border-primary/40 bg-primary/15 text-primary">
-            custom
+            {t('skillsUi.badgeCustom')}
           </Badge>
         </div>
         <CardTitle className="text-base">{skill.name}</CardTitle>
@@ -119,7 +122,7 @@ export function CustomCard({
           }}
         >
           <Pencil className="mr-1 size-3" />
-          Edit
+          {t('skillsUi.edit')}
         </Button>
         <Button
           size="sm"
@@ -130,7 +133,7 @@ export function CustomCard({
             onRename();
           }}
         >
-          Rename
+          {t('skillsUi.rename')}
         </Button>
         <Button
           size="sm"
@@ -142,7 +145,7 @@ export function CustomCard({
           }}
         >
           <Trash className="mr-1 size-3" />
-          Delete
+          {t('skillsUi.delete')}
         </Button>
         <Button
           size="sm"
@@ -152,7 +155,7 @@ export function CustomCard({
         >
           <Link href={`/workspace?path=/skills/${dirName}`} onClick={(e) => e.stopPropagation()}>
             <FolderOpen className="mr-1 size-3" />
-            Manage files
+            {t('skillsUi.manageFiles')}
           </Link>
         </Button>
       </CardFooter>

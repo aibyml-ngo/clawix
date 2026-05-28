@@ -2,6 +2,7 @@
 
 import { FilePlus, FolderPlus, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/i18n';
 
 interface WorkspaceToolbarProps {
   readonly entryCount: number;
@@ -16,23 +17,26 @@ export function WorkspaceToolbar({
   onNewFolder,
   onUpload,
 }: WorkspaceToolbarProps) {
+  const { t } = useLanguage();
   return (
     <div className="flex items-center gap-2">
       <Button variant="outline" size="sm" onClick={onNewFile}>
         <FilePlus className="mr-1.5 size-4" />
-        New File
+        {t('workspace.newFile')}
       </Button>
       <Button variant="outline" size="sm" onClick={onNewFolder}>
         <FolderPlus className="mr-1.5 size-4" />
-        New Folder
+        {t('workspace.newFolder')}
       </Button>
       <Button variant="outline" size="sm" onClick={onUpload}>
         <Upload className="mr-1.5 size-4" />
-        Upload
+        {t('workspace.upload')}
       </Button>
       <div className="flex-1" />
       <span className="text-xs text-muted-foreground">
-        {entryCount} {entryCount === 1 ? 'item' : 'items'}
+        {entryCount === 1
+          ? t('workspace.itemCountOne', { count: entryCount })
+          : t('workspace.itemCountOther', { count: entryCount })}
       </span>
     </div>
   );

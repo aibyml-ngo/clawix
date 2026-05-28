@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { FileWarning, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getAccessToken } from '@/lib/auth';
+import { useLanguage } from '@/i18n';
 
 interface ImagePreviewProps {
   readonly path: string;
@@ -12,6 +13,7 @@ interface ImagePreviewProps {
 }
 
 export function ImagePreview({ path, alt, className }: ImagePreviewProps) {
+  const { t } = useLanguage();
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,13 +24,13 @@ export function ImagePreview({ path, alt, className }: ImagePreviewProps) {
     (async () => {
       try {
         const token = await getAccessToken();
-        if (!token) throw new Error('Not authenticated');
+        if (!token) throw new Error(t('workspace.notAuthenticated'));
         const apiBase = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
         const res = await fetch(
           `${apiBase}/api/v1/workspace/files/download?path=${encodeURIComponent(path)}&inline=true`,
           { headers: { Authorization: `Bearer ${token}` } },
         );
-        if (!res.ok) throw new Error(`Failed to load image (HTTP ${res.status})`);
+        if (!res.ok) throw new Error(t('workspace.errorLoadImageStatus', { status: res.status }));
         const blob = await res.blob();
         objectUrl = URL.createObjectURL(blob);
         if (!cancelled) {
@@ -38,7 +40,7 @@ export function ImagePreview({ path, alt, className }: ImagePreviewProps) {
           URL.revokeObjectURL(objectUrl);
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load image');
+        if (!cancelled) setError(err instanceof Error ? err.message : t('workspace.errorLoadImage'));
       }
     })();
 
@@ -46,7 +48,7 @@ export function ImagePreview({ path, alt, className }: ImagePreviewProps) {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [path]);
+  }, [path, t]);
 
   if (error) {
     return (

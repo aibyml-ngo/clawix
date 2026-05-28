@@ -69,8 +69,14 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Used outside a LanguageProvider (e.g. isolated component tests) — fall back
+// to English rather than throwing, so a missing provider never crashes a tree.
+const FALLBACK: LanguageContextValue = {
+  lang: 'en',
+  setLang: () => {},
+  t: (key, params) => resolve(en, key, params),
+};
+
 export function useLanguage(): LanguageContextValue {
-  const ctx = useContext(LanguageContext);
-  if (!ctx) throw new Error('useLanguage must be used within a LanguageProvider');
-  return ctx;
+  return useContext(LanguageContext) ?? FALLBACK;
 }

@@ -25,6 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useLanguage } from '@/i18n';
 import { ApiError } from '@/lib/api';
 import {
   extractText,
@@ -74,6 +75,7 @@ function parseFreeFormTags(raw: string): string[] {
 }
 
 export function CardEditor({ target, knownDomains, canMutate, isAdmin, onClose, onSaved }: Props) {
+  const { t } = useLanguage();
   const isEdit = target.mode === 'edit';
   const item = isEdit ? target.item : null;
   const wasOrgShared = item ? itemIsOrgShared(item) : false;
@@ -101,11 +103,11 @@ export function CardEditor({ target, knownDomains, canMutate, isAdmin, onClose, 
 
   const handleSave = async () => {
     if (!body.trim()) {
-      setError('Content is required.');
+      setError(t('memoryUi.errorContentRequired'));
       return;
     }
     if (!domainValid) {
-      setError('Pick a domain (lowercase, alphanumeric, hyphens, max 31 chars).');
+      setError(t('memoryUi.errorPickDomain'));
       return;
     }
 
@@ -128,9 +130,9 @@ export function CardEditor({ target, knownDomains, canMutate, isAdmin, onClose, 
       onSaved();
     } catch (e) {
       if (e instanceof ApiError && e.status === 403) {
-        setError('You can only edit memory you own.');
+        setError(t('memoryUi.errorEditOwnOnly'));
       } else {
-        setError(e instanceof Error ? e.message : 'Failed to save');
+        setError(e instanceof Error ? e.message : t('memoryUi.errorSaveFailed'));
       }
     } finally {
       setSaving(false);
@@ -145,7 +147,7 @@ export function CardEditor({ target, knownDomains, canMutate, isAdmin, onClose, 
       onSaved();
     } catch (e) {
       setConfirmDeleteOpen(false);
-      setError(e instanceof Error ? e.message : 'Failed to delete');
+      setError(e instanceof Error ? e.message : t('memoryUi.errorDeleteFailed'));
     }
   };
 
@@ -153,10 +155,10 @@ export function CardEditor({ target, knownDomains, canMutate, isAdmin, onClose, 
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="flex flex-col gap-4 sm:max-w-2xl">
         <SheetHeader>
-          <SheetTitle>{isEdit ? 'Edit memory' : 'New memory'}</SheetTitle>
+          <SheetTitle>{isEdit ? t('memoryUi.editTitle') : t('memoryUi.newTitle')}</SheetTitle>
           <SheetDescription>
-            Saved memory is searchable by your agent. Toggle <code>public</code> to opt into
-            org-wide visibility.
+            {t('memoryUi.sheetDescriptionPrefix')} <code>public</code>{' '}
+            {t('memoryUi.sheetDescriptionSuffix')}
           </SheetDescription>
         </SheetHeader>
 
@@ -168,7 +170,7 @@ export function CardEditor({ target, knownDomains, canMutate, isAdmin, onClose, 
           )}
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="domain">Domain (kanban column)</Label>
+            <Label htmlFor="domain">{t('memoryUi.domainLabel')}</Label>
             <select
               id="domain"
               className="h-9 rounded-md border bg-background px-3 text-sm"
@@ -176,7 +178,7 @@ export function CardEditor({ target, knownDomains, canMutate, isAdmin, onClose, 
               onChange={(e) => setDomain(e.target.value)}
               disabled={!canMutate}
             >
-              <option value="">— pick a domain —</option>
+              <option value="">{t('memoryUi.domainPickPlaceholder')}</option>
               {knownDomains
                 .filter((d) => d !== 'untagged')
                 .map((d) => (
@@ -184,45 +186,43 @@ export function CardEditor({ target, knownDomains, canMutate, isAdmin, onClose, 
                     {d}
                   </option>
                 ))}
-              <option value="__new__">+ new domain…</option>
+              <option value="__new__">{t('memoryUi.domainNewOption')}</option>
             </select>
             {domain === '__new__' && (
               <Input
-                placeholder="e.g. hr, engineering, personal"
+                placeholder={t('memoryUi.domainNewPlaceholder')}
                 value={newDomainInput}
                 onChange={(e) => setNewDomainInput(e.target.value)}
                 disabled={!canMutate}
               />
             )}
-            <p className="text-xs text-muted-foreground">
-              One domain per memory. Lowercase letters, numbers, and hyphens.
-            </p>
+            <p className="text-xs text-muted-foreground">{t('memoryUi.domainHelp')}</p>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="body">Content</Label>
+            <Label htmlFor="body">{t('memoryUi.contentLabel')}</Label>
             <Textarea
               id="body"
               value={body}
               onChange={(e) => setBody(e.target.value)}
               className="min-h-[200px] font-mono text-sm"
-              placeholder="Markdown body…"
+              placeholder={t('memoryUi.contentPlaceholder')}
               disabled={!canMutate}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="tags">Tags (comma-separated)</Label>
+            <Label htmlFor="tags">{t('memoryUi.tagsLabel')}</Label>
             <Input
               id="tags"
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
-              placeholder="urgent, q3, draft"
+              placeholder={t('memoryUi.tagsPlaceholder')}
               disabled={!canMutate}
             />
             <p className="text-xs text-muted-foreground">
-              Free-form tags. Reserved prefixes (<code>domain:</code>, <code>daily:</code>) are
-              stripped automatically.
+              {t('memoryUi.tagsHelpPrefix')} (<code>domain:</code>, <code>daily:</code>){' '}
+              {t('memoryUi.tagsHelpSuffix')}
             </p>
           </div>
 
@@ -232,12 +232,12 @@ export function CardEditor({ target, knownDomains, canMutate, isAdmin, onClose, 
             <div className="flex items-center justify-between rounded-md border p-3">
               <div className="flex flex-col gap-0.5">
                 <Label htmlFor="org-share-toggle" className="text-sm">
-                  Share with organization
+                  {t('memoryUi.orgShareLabel')}
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Make this memory visible to every user in the org. Their agents will find it via{' '}
-                  <code>search_memory</code>. Backed by a <code>MemoryShare(targetType=ORG)</code>{' '}
-                  row — same primitive as <code>share_memory</code>.
+                  {t('memoryUi.orgShareHelpPart1')} <code>search_memory</code>.{' '}
+                  {t('memoryUi.orgShareHelpPart2')} <code>MemoryShare(targetType=ORG)</code>{' '}
+                  {t('memoryUi.orgShareHelpPart3')} <code>share_memory</code>.
                 </p>
               </div>
               <Switch
@@ -251,8 +251,12 @@ export function CardEditor({ target, knownDomains, canMutate, isAdmin, onClose, 
 
           {isEdit && (
             <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
-              <Badge variant="outline">Created {new Date(item!.createdAt).toLocaleString()}</Badge>
-              <Badge variant="outline">Updated {new Date(item!.updatedAt).toLocaleString()}</Badge>
+              <Badge variant="outline">
+                {t('memoryUi.createdAt', { date: new Date(item!.createdAt).toLocaleString() })}
+              </Badge>
+              <Badge variant="outline">
+                {t('memoryUi.updatedAt', { date: new Date(item!.updatedAt).toLocaleString() })}
+              </Badge>
             </div>
           )}
         </div>
@@ -266,14 +270,14 @@ export function CardEditor({ target, knownDomains, canMutate, isAdmin, onClose, 
               disabled={saving}
             >
               <Trash2 className="mr-1 size-4" />
-              Delete
+              {t('memoryUi.delete')}
             </Button>
           ) : (
             <span />
           )}
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose} disabled={saving}>
-              Close
+              {t('memoryUi.close')}
             </Button>
             {canMutate && (
               <Button onClick={handleSave} disabled={saving}>
@@ -282,7 +286,7 @@ export function CardEditor({ target, knownDomains, canMutate, isAdmin, onClose, 
                 ) : (
                   <Save className="mr-1 size-4" />
                 )}
-                Save
+                {t('memoryUi.save')}
               </Button>
             )}
           </div>
@@ -292,19 +296,16 @@ export function CardEditor({ target, knownDomains, canMutate, isAdmin, onClose, 
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this memory?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Permanently removes the row. Agents will no longer find it via search. This cannot be
-              undone.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t('memoryUi.deleteConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('memoryUi.deleteConfirmBody')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('memoryUi.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => void handleDelete()}
             >
-              Delete
+              {t('memoryUi.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { authFetch } from '@/lib/auth';
+import { useLanguage } from '@/i18n';
 import { SuccessDialog } from '@/components/ui/success-dialog';
 import { CreateProviderDialog, EditProviderDialog } from './providers-dialogs';
 
@@ -55,6 +56,7 @@ export interface ApiProvider {
 // ------------------------------------------------------------------ //
 
 export function ProvidersTab() {
+  const { t } = useLanguage();
   const [providers, setProviders] = useState<ApiProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -72,11 +74,11 @@ export function ProvidersTab() {
       const res = await authFetch<ApiProvider[]>('/admin/providers');
       setProviders(Array.isArray(res) ? res : []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load providers');
+      setError(err instanceof Error ? err.message : t('settingsTabs.providersLoadError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void fetchProviders();
@@ -93,10 +95,14 @@ export function ProvidersTab() {
       setCreateOpen(false);
       await fetchProviders();
       setSuccessMessage(
-        `${(data as { displayName?: string }).displayName ?? 'Provider'} has been added.`,
+        t('settingsTabs.providerAddedMessage', {
+          name:
+            (data as { displayName?: string }).displayName ??
+            t('settingsTabs.providerFallbackName'),
+        }),
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create provider');
+      setError(err instanceof Error ? err.message : t('settingsTabs.providerCreateError'));
     } finally {
       setSaving(false);
     }
@@ -112,7 +118,7 @@ export function ProvidersTab() {
       });
       await fetchProviders();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update provider');
+      setError(err instanceof Error ? err.message : t('settingsTabs.providerUpdateError'));
     } finally {
       setSaving(false);
     }
@@ -128,7 +134,7 @@ export function ProvidersTab() {
       });
       await fetchProviders();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to set default provider');
+      setError(err instanceof Error ? err.message : t('settingsTabs.providerSetDefaultError'));
     } finally {
       setSaving(false);
     }
@@ -145,7 +151,7 @@ export function ProvidersTab() {
       setEditProvider(null);
       await fetchProviders();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update provider');
+      setError(err instanceof Error ? err.message : t('settingsTabs.providerUpdateError'));
     } finally {
       setSaving(false);
     }
@@ -159,7 +165,7 @@ export function ProvidersTab() {
       setDeleteProvider(null);
       await fetchProviders();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete provider');
+      setError(err instanceof Error ? err.message : t('settingsTabs.providerDeleteError'));
     } finally {
       setSaving(false);
     }
@@ -175,7 +181,7 @@ export function ProvidersTab() {
           }}
         >
           <Plus className="mr-1 size-4" />
-          Add Provider
+          {t('settingsTabs.addProvider')}
         </Button>
       </div>
 
@@ -191,18 +197,18 @@ export function ProvidersTab() {
         </div>
       ) : providers.length === 0 ? (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm p-8 text-center text-sm text-muted-foreground">
-          No providers configured. Click &quot;Add Provider&quot; to get started.
+          {t('settingsTabs.providersEmpty')}
         </div>
       ) : (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Provider</TableHead>
-                <TableHead>API Key</TableHead>
-                <TableHead>Base URL</TableHead>
-                <TableHead>Default</TableHead>
-                <TableHead>Enabled</TableHead>
+                <TableHead>{t('settingsTabs.colProvider')}</TableHead>
+                <TableHead>{t('settingsTabs.colApiKey')}</TableHead>
+                <TableHead>{t('settingsTabs.colBaseUrl')}</TableHead>
+                <TableHead>{t('settingsTabs.colDefault')}</TableHead>
+                <TableHead>{t('settingsTabs.colEnabled')}</TableHead>
                 <TableHead className="w-[50px]" />
               </TableRow>
             </TableHeader>
@@ -231,7 +237,7 @@ export function ProvidersTab() {
                       }}
                     >
                       <Star className={`size-3 ${p.isDefault ? 'fill-current' : ''}`} />
-                      Default
+                      {t('settingsTabs.defaultBadge')}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -256,7 +262,7 @@ export function ProvidersTab() {
                             setEditProvider(p);
                           }}
                         >
-                          Edit
+                          {t('settingsTabs.edit')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -265,7 +271,7 @@ export function ProvidersTab() {
                             setDeleteProvider(p);
                           }}
                         >
-                          Remove
+                          {t('settingsTabs.remove')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -304,14 +310,15 @@ export function ProvidersTab() {
         {deleteProvider && (
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Remove Provider</AlertDialogTitle>
+              <AlertDialogTitle>{t('settingsTabs.removeProviderTitle')}</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to remove <strong>{deleteProvider.displayName}</strong> (
-                {deleteProvider.provider})? Agents using this provider will fail until reconfigured.
+                {t('settingsTabs.removeProviderConfirmBefore')}
+                <strong>{deleteProvider.displayName}</strong> ({deleteProvider.provider})
+                {t('settingsTabs.removeProviderConfirmAfter')}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t('settingsTabs.cancel')}</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={() => {
@@ -320,7 +327,7 @@ export function ProvidersTab() {
                 disabled={saving}
               >
                 {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-                Remove
+                {t('settingsTabs.remove')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -332,7 +339,7 @@ export function ProvidersTab() {
         onOpenChange={(open) => {
           if (!open) setSuccessMessage('');
         }}
-        title="Provider Added"
+        title={t('settingsTabs.providerAddedTitle')}
         description={successMessage}
       />
     </>

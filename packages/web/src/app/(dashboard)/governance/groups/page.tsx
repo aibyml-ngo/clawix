@@ -5,6 +5,7 @@ import { Loader2, Plus, RotateCcw, Trash2, UserPlus, LogOut } from 'lucide-react
 import { toast } from 'sonner';
 
 import { useAuth } from '@/components/auth-provider';
+import { useLanguage } from '@/i18n';
 import { InvitePicker, type PickedUser } from './invite-picker';
 
 import {
@@ -53,6 +54,7 @@ type LoadState = 'idle' | 'loading' | 'error';
 
 export default function GroupsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const isAdmin = user?.role === 'admin';
 
   const [memberships, setMemberships] = useState<GroupMembership[]>([]);
@@ -93,24 +95,24 @@ export default function GroupsPage() {
       setState('idle');
     } catch (e) {
       setState('error');
-      setError(e instanceof Error ? e.message : 'Failed to load');
+      setError(e instanceof Error ? e.message : t('groups.errors.load'));
     }
-  }, [isAdmin]);
+  }, [isAdmin, t]);
 
   const handleRestore = useCallback(
     async (group: Group & { deletedAt: string }) => {
       setRestoringId(group.id);
       try {
         await groupsApi.restore(group.id);
-        toast.success(`Restored "${group.name}"`);
+        toast.success(t('groups.toast.restored', { name: group.name }));
         await refresh();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Failed to restore group');
+        toast.error(e instanceof Error ? e.message : t('groups.errors.restore'));
       } finally {
         setRestoringId(null);
       }
     },
-    [refresh],
+    [refresh, t],
   );
 
   useEffect(() => {
@@ -138,11 +140,11 @@ export default function GroupsPage() {
       setCreateOpen(false);
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Create failed');
+      setError(e instanceof Error ? e.message : t('groups.errors.create'));
     } finally {
       setCreating(false);
     }
-  }, [name, description, refresh]);
+  }, [name, description, refresh, t]);
 
   const handleConfirm = useCallback(async () => {
     if (!confirm) return;
@@ -157,59 +159,61 @@ export default function GroupsPage() {
       await refresh();
     } catch (e) {
       const msg =
-        e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'Action failed';
+        e instanceof ApiError
+          ? e.message
+          : e instanceof Error
+            ? e.message
+            : t('groups.errors.action');
       setError(msg);
       setConfirm(null);
     }
-  }, [confirm, refresh]);
+  }, [confirm, refresh, t]);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex items-center justify-between border-b border-border/60 pb-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">Groups</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{t('groups.title')}</h1>
             <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground/70">
-              collaboration
+              {t('groups.eyebrow')}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Collaboration namespaces for shared memory. Anyone can create one and invite others.
-          </p>
+          <p className="text-sm text-muted-foreground">{t('groups.subtitle')}</p>
         </div>
 
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              New group
+              {t('groups.newGroup')}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create a group</DialogTitle>
-              <DialogDescription>
-                You'll automatically be set as the owner. You can invite members afterwards.
-              </DialogDescription>
+              <DialogTitle>{t('groups.createDialog.title')}</DialogTitle>
+              <DialogDescription>{t('groups.createDialog.description')}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="group-name">Name</Label>
+                <Label htmlFor="group-name">{t('groups.createDialog.nameLabel')}</Label>
                 <Input
                   id="group-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Platform team"
+                  placeholder={t('groups.createDialog.namePlaceholder')}
                   maxLength={128}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="group-description">Description (optional)</Label>
+                <Label htmlFor="group-description">
+                  {t('groups.createDialog.descriptionLabel')}
+                </Label>
                 <Textarea
                   id="group-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What is this group for?"
+                  placeholder={t('groups.createDialog.descriptionPlaceholder')}
                   maxLength={500}
                   rows={3}
                 />
@@ -217,11 +221,11 @@ export default function GroupsPage() {
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setCreateOpen(false)}>
-                Cancel
+                {t('groups.cancel')}
               </Button>
               <Button onClick={handleCreate} disabled={!name.trim() || creating}>
                 {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Create
+                {t('groups.create')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -236,10 +240,16 @@ export default function GroupsPage() {
 
       <Tabs defaultValue="mine">
         <TabsList>
-          <TabsTrigger value="mine">My groups ({memberships.length})</TabsTrigger>
-          <TabsTrigger value="sent">Sent invites ({sentInvites.length})</TabsTrigger>
+          <TabsTrigger value="mine">
+            {t('groups.tabs.mine', { count: memberships.length })}
+          </TabsTrigger>
+          <TabsTrigger value="sent">
+            {t('groups.tabs.sent', { count: sentInvites.length })}
+          </TabsTrigger>
           {isAdmin ? (
-            <TabsTrigger value="deleted">Deleted ({deletedGroups.length})</TabsTrigger>
+            <TabsTrigger value="deleted">
+              {t('groups.tabs.deleted', { count: deletedGroups.length })}
+            </TabsTrigger>
           ) : null}
         </TabsList>
 
@@ -248,13 +258,13 @@ export default function GroupsPage() {
             <Card>
               <CardContent className="flex items-center gap-2 pt-6 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Loading…
+                {t('groups.loading')}
               </CardContent>
             </Card>
           ) : memberships.length === 0 ? (
             <Card>
               <CardContent className="pt-6 text-sm text-muted-foreground">
-                You're not in any groups yet. Create one with the button above.
+                {t('groups.empty.mine')}
               </CardContent>
             </Card>
           ) : (
@@ -284,7 +294,7 @@ export default function GroupsPage() {
                           }
                           variant="outline"
                         >
-                          {m.role}
+                          {isOwner ? t('groups.role.owner') : t('groups.role.member')}
                         </Badge>
                       </CardTitle>
                       {m.group.description ? (
@@ -295,10 +305,14 @@ export default function GroupsPage() {
                     </CardHeader>
                     <CardContent className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="font-mono">
-                        {m.group._count.members} member{m.group._count.members === 1 ? '' : 's'}
+                        {t('groups.memberCount', { count: m.group._count.members })}
                       </span>
                       <span className="text-muted-foreground/40">·</span>
-                      <span>joined {new Date(m.joinedAt).toLocaleDateString()}</span>
+                      <span>
+                        {t('groups.joinedOn', {
+                          date: new Date(m.joinedAt).toLocaleDateString(),
+                        })}
+                      </span>
                     </CardContent>
                   </Card>
                 );
@@ -311,7 +325,7 @@ export default function GroupsPage() {
           {sentInvites.length === 0 ? (
             <Card>
               <CardContent className="pt-6 text-sm text-muted-foreground">
-                You haven't sent any invites.
+                {t('groups.empty.sent')}
               </CardContent>
             </Card>
           ) : (
@@ -330,8 +344,7 @@ export default function GroupsPage() {
             {deletedGroups.length === 0 ? (
               <Card>
                 <CardContent className="pt-6 text-sm text-muted-foreground">
-                  No soft-deleted groups. Restoring brings the group back and re-enables every group
-                  memory share that was active at delete time.
+                  {t('groups.empty.deleted')}
                 </CardContent>
               </Card>
             ) : (
@@ -345,7 +358,9 @@ export default function GroupsPage() {
                       <div className="flex min-w-0 flex-col gap-0.5">
                         <span className="truncate font-medium">{g.name}</span>
                         <span className="text-xs text-muted-foreground">
-                          deleted {new Date(g.deletedAt).toLocaleString()}
+                          {t('groups.deletedOn', {
+                            date: new Date(g.deletedAt).toLocaleString(),
+                          })}
                         </span>
                       </div>
                       <Button
@@ -360,7 +375,7 @@ export default function GroupsPage() {
                         ) : (
                           <RotateCcw className="mr-1 size-3" />
                         )}
-                        Restore
+                        {t('groups.restore')}
                       </Button>
                     </div>
                   ))}
@@ -383,22 +398,22 @@ export default function GroupsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {confirm?.kind === 'delete-group'
-                ? `Delete "${confirm.groupName}"?`
+                ? t('groups.confirm.deleteTitle', { name: confirm.groupName })
                 : confirm?.kind === 'leave-group'
-                  ? `Leave "${confirm.groupName}"?`
+                  ? t('groups.confirm.leaveTitle', { name: confirm.groupName })
                   : ''}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirm?.kind === 'delete-group'
-                ? 'Members lose access and every memory share is revoked. Only an admin can restore the deletion.'
+                ? t('groups.confirm.deleteDescription')
                 : confirm?.kind === 'leave-group'
-                  ? "You'll lose access to memory shared with this group. You can be re-invited later."
+                  ? t('groups.confirm.leaveDescription')
                   : ''}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirm}>Confirm</AlertDialogAction>
+            <AlertDialogCancel>{t('groups.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirm}>{t('groups.confirm.action')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -407,6 +422,7 @@ export default function GroupsPage() {
 }
 
 function SentInviteRow({ invite, onChange }: { invite: GroupInvite; onChange: () => void }) {
+  const { t } = useLanguage();
   const [busy, setBusy] = useState(false);
   const handleRevoke = async () => {
     setBusy(true);
@@ -418,21 +434,29 @@ function SentInviteRow({ invite, onChange }: { invite: GroupInvite; onChange: ()
     }
   };
   const inviteeLabel = invite.invitee.name ?? invite.invitee.email;
+  const statusLabel =
+    invite.status === 'PENDING'
+      ? t('groups.inviteStatus.pending')
+      : invite.status === 'ACCEPTED'
+        ? t('groups.inviteStatus.accepted')
+        : invite.status === 'REJECTED'
+          ? t('groups.inviteStatus.rejected')
+          : invite.status;
   return (
     <div className="flex items-center justify-between rounded-md border p-3 text-sm">
       <div className="flex flex-col gap-1">
         <span className="font-medium">
-          Invite to <span className="text-foreground">{inviteeLabel}</span> for{' '}
-          <span className="text-foreground">{invite.group.name}</span>
+          {t('groups.inviteTo')} <span className="text-foreground">{inviteeLabel}</span>{' '}
+          {t('groups.inviteFor')} <span className="text-foreground">{invite.group.name}</span>
         </span>
         <span className="text-xs text-muted-foreground">
-          {invite.invitee.email} · {invite.status} · sent{' '}
-          {new Date(invite.createdAt).toLocaleString()}
+          {invite.invitee.email} · {statusLabel} ·{' '}
+          {t('groups.sentOn', { date: new Date(invite.createdAt).toLocaleString() })}
         </span>
       </div>
       {invite.status === 'PENDING' ? (
         <Button size="sm" variant="ghost" onClick={handleRevoke} disabled={busy}>
-          Revoke
+          {t('groups.revoke')}
         </Button>
       ) : null}
     </div>
@@ -454,6 +478,7 @@ function GroupDetailSheet({
       | { kind: 'leave-group'; groupId: string; groupName: string },
   ) => void;
 }) {
+  const { t } = useLanguage();
   const [picked, setPicked] = useState<PickedUser[]>([]);
   const [inviting, setInviting] = useState(false);
   const [detail, setDetail] = useState<GroupDetail | null>(null);
@@ -495,9 +520,9 @@ function GroupDetailSheet({
       r: PromiseRejectedResult;
       u: PickedUser;
     }[];
-    if (ok > 0) toast.success(`Sent ${ok} invite${ok === 1 ? '' : 's'}`);
+    if (ok > 0) toast.success(t('groups.toast.invitesSent', { count: ok }));
     for (const { u, r } of failures) {
-      const msg = r.reason instanceof Error ? r.reason.message : 'Invite failed';
+      const msg = r.reason instanceof Error ? r.reason.message : t('groups.errors.invite');
       toast.error(`${u.email}: ${msg}`);
     }
     setPicked([]);
@@ -525,7 +550,9 @@ function GroupDetailSheet({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2 pr-8">
             <span className="truncate">{membership.group.name}</span>
-            <Badge variant={isOwner ? 'default' : 'secondary'}>{membership.role}</Badge>
+            <Badge variant={isOwner ? 'default' : 'secondary'}>
+              {isOwner ? t('groups.role.owner') : t('groups.role.member')}
+            </Badge>
           </SheetTitle>
           {membership.group.description ? (
             <SheetDescription>{membership.group.description}</SheetDescription>
@@ -534,7 +561,7 @@ function GroupDetailSheet({
 
         <div className="space-y-6 px-4 py-6">
           <section className="space-y-3">
-            <h3 className="text-sm font-medium">Invite members</h3>
+            <h3 className="text-sm font-medium">{t('groups.detail.inviteMembers')}</h3>
             <InvitePicker
               groupId={membership.groupId}
               picked={picked}
@@ -552,22 +579,24 @@ function GroupDetailSheet({
                 <UserPlus className="mr-2 h-4 w-4" />
               )}
               {picked.length === 0
-                ? 'Invite'
-                : `Invite ${picked.length} ${picked.length === 1 ? 'person' : 'people'}`}
+                ? t('groups.detail.invite')
+                : t('groups.detail.inviteCount', { count: picked.length })}
             </Button>
           </section>
 
           <section className="space-y-3 border-t pt-4">
             <h3 className="text-sm font-medium">
-              Members{detail ? ` (${detail.members.length})` : ''}
+              {detail
+                ? t('groups.detail.membersCount', { count: detail.members.length })
+                : t('groups.detail.members')}
             </h3>
             {!detail ? (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                Loading…
+                {t('groups.loading')}
               </div>
             ) : detail.members.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No members yet.</p>
+              <p className="text-xs text-muted-foreground">{t('groups.detail.noMembers')}</p>
             ) : (
               <ul className="space-y-1">
                 {detail.members.map((m) => (
@@ -580,7 +609,9 @@ function GroupDetailSheet({
                       <span className="truncate text-xs text-muted-foreground">{m.user.email}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={m.role === 'OWNER' ? 'default' : 'secondary'}>{m.role}</Badge>
+                      <Badge variant={m.role === 'OWNER' ? 'default' : 'secondary'}>
+                        {m.role === 'OWNER' ? t('groups.role.owner') : t('groups.role.member')}
+                      </Badge>
                       {isOwner && m.role !== 'OWNER' ? (
                         <Button
                           size="sm"
@@ -603,7 +634,7 @@ function GroupDetailSheet({
           </section>
 
           <section className="space-y-2 border-t pt-4">
-            <h3 className="text-sm font-medium">Danger zone</h3>
+            <h3 className="text-sm font-medium">{t('groups.detail.dangerZone')}</h3>
             <div className="flex flex-col gap-2">
               {/* Owners can't leave their own group; they delete it instead. */}
               {!isOwner ? (
@@ -618,7 +649,7 @@ function GroupDetailSheet({
                   }
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  Leave group
+                  {t('groups.detail.leaveGroup')}
                 </Button>
               ) : null}
               {isOwner ? (
@@ -633,7 +664,7 @@ function GroupDetailSheet({
                   }
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete group
+                  {t('groups.detail.deleteGroup')}
                 </Button>
               ) : null}
             </div>

@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { useLanguage } from '@/i18n';
 import type { ChatSession } from './use-chat';
 
 /* ------------------------------------------------------------------ */
@@ -52,15 +53,15 @@ function getDayKey(dateStr: string): string {
 }
 
 // Human-friendly label for a day group: "Today", "Yesterday", or a localized date.
-function formatDayLabel(dateStr: string): string {
+function formatDayLabel(dateStr: string, t: (key: string) => string): string {
   const date = new Date(dateStr);
   const today = new Date();
   const todayKey = getDayKey(today.toISOString());
   const dayKey = getDayKey(dateStr);
-  if (dayKey === todayKey) return 'Today';
+  if (dayKey === todayKey) return t('conv.today');
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (dayKey === getDayKey(yesterday.toISOString())) return 'Yesterday';
+  if (dayKey === getDayKey(yesterday.toISOString())) return t('conv.yesterday');
   const sameYear = date.getFullYear() === today.getFullYear();
   return date.toLocaleDateString('en-US', {
     weekday: 'short',
@@ -90,6 +91,7 @@ export function SessionSidebar({
   onLoadMore,
   onSessionUpdated,
 }: SessionSidebarProps) {
+  const { t } = useLanguage();
   const [renameSession, setRenameSession] = useState<ChatSession | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [saving, setSaving] = useState(false);
@@ -230,7 +232,7 @@ export function SessionSidebar({
       {searchOpen && (
         <div className="px-3 pb-2">
           <Input
-            placeholder="Search conversations..."
+            placeholder={t('conv.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="h-8 text-sm"
@@ -247,13 +249,13 @@ export function SessionSidebar({
           </div>
         ) : sorted.length === 0 ? (
           <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-            {searchQuery ? 'No matching conversations' : 'No conversations yet'}
+            {searchQuery ? t('conv.noMatching') : t('conv.noConversations')}
           </p>
         ) : (
           dayKeys.map((dayKey) => {
             const daySessions = groups.get(dayKey) ?? [];
             const isExpanded = expandedDays.has(dayKey);
-            const label = formatDayLabel(daySessions[0]!.createdAt);
+            const label = formatDayLabel(daySessions[0]!.createdAt, t);
             return (
               <div key={dayKey}>
                 <button
@@ -289,14 +291,17 @@ export function SessionSidebar({
                             <Archive className="size-3 shrink-0 text-muted-foreground" />
                           )}
                           <span className="truncate">
-                            {session.topic ?? `Session — ${formatShortDate(session.createdAt)}`}
+                            {session.topic ??
+                              t('conv.sessionFallback', {
+                                date: formatShortDate(session.createdAt),
+                              })}
                           </span>
                         </button>
                       </ContextMenuTrigger>
                       <ContextMenuContent>
                         <ContextMenuItem onClick={() => handleRename(session)}>
                           <Pencil className="mr-2 size-4" />
-                          Rename
+                          {t('conv.rename')}
                         </ContextMenuItem>
                       </ContextMenuContent>
                     </ContextMenu>
@@ -319,13 +324,13 @@ export function SessionSidebar({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename Conversation</DialogTitle>
-            <DialogDescription>Enter a new name for this conversation.</DialogDescription>
+            <DialogTitle>{t('conv.renameTitle')}</DialogTitle>
+            <DialogDescription>{t('conv.renameDescription')}</DialogDescription>
           </DialogHeader>
           <Input
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
-            placeholder="Conversation topic..."
+            placeholder={t('conv.renamePlaceholder')}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !saving) {
                 void handleRenameSubmit();
@@ -334,11 +339,11 @@ export function SessionSidebar({
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setRenameSession(null)} disabled={saving}>
-              Cancel
+              {t('conv.cancel')}
             </Button>
             <Button onClick={() => void handleRenameSubmit()} disabled={saving}>
               {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-              Save
+              {t('conv.save')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -348,15 +353,12 @@ export function SessionSidebar({
       <Dialog open={confirmNewChat} onOpenChange={setConfirmNewChat}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Start New Conversation</DialogTitle>
-            <DialogDescription>
-              Starting a new conversation will archive your current one. You can still view it later
-              in the sidebar.
-            </DialogDescription>
+            <DialogTitle>{t('conv.newChatTitle')}</DialogTitle>
+            <DialogDescription>{t('conv.newChatDescription')}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setConfirmNewChat(false)}>
-              Cancel
+              {t('conv.cancel')}
             </Button>
             <Button
               onClick={() => {
@@ -364,7 +366,7 @@ export function SessionSidebar({
                 onNewChat(true);
               }}
             >
-              Archive & Start New
+              {t('conv.archiveAndNew')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -6,6 +6,7 @@ import { authFetch } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/i18n';
 
 interface RunMessage {
   id: string;
@@ -35,6 +36,7 @@ interface MessagesResponse {
 export default function RunDetailPage() {
   const { id, runId } = useParams<{ id: string; runId: string }>();
   const router = useRouter();
+  const { t } = useLanguage();
   const [run, setRun] = useState<Run | null>(null);
   const [messages, setMessages] = useState<RunMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,25 +48,25 @@ export default function RunDetailPage() {
       setRun(resp.data.run);
       setMessages(resp.data.messages);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load run.');
+      setError(err instanceof Error ? err.message : t('taskDetail.runLoadError'));
     } finally {
       setLoading(false);
     }
-  }, [id, runId]);
+  }, [id, runId, t]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  if (loading) return <div className="p-6 text-muted-foreground">Loading…</div>;
-  if (error) return <div className="p-6 text-destructive">Error: {error}</div>;
-  if (!run) return <div className="p-6">Run not found.</div>;
+  if (loading) return <div className="p-6 text-muted-foreground">{t('taskDetail.loading')}</div>;
+  if (error) return <div className="p-6 text-destructive">{t('taskDetail.errorPrefix')} {error}</div>;
+  if (!run) return <div className="p-6">{t('taskDetail.runNotFound')}</div>;
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight">Run</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('taskDetail.runTitle')}</h1>
           <Badge
             variant={
               run.status === 'completed'
@@ -78,34 +80,37 @@ export default function RunDetailPage() {
           </Badge>
         </div>
         <Button variant="outline" onClick={() => router.push(`/tasks/${id}`)}>
-          Back to Task
+          {t('taskDetail.backToTask')}
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Summary</CardTitle>
+          <CardTitle>{t('taskDetail.summary')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div>
-            <span className="text-muted-foreground">Started: </span>
+            <span className="text-muted-foreground">{t('taskDetail.startedLabel')} </span>
             {new Date(run.startedAt).toLocaleString()}
           </div>
           <div>
-            <span className="text-muted-foreground">Completed: </span>
+            <span className="text-muted-foreground">{t('taskDetail.completedLabel')} </span>
             {run.completedAt ? new Date(run.completedAt).toLocaleString() : '—'}
           </div>
           <div>
-            <span className="text-muted-foreground">Duration: </span>
+            <span className="text-muted-foreground">{t('taskDetail.durationLabel')} </span>
             {run.durationMs != null ? `${run.durationMs}ms` : '—'}
           </div>
           <div>
-            <span className="text-muted-foreground">Tokens: </span>
-            in {run.tokenUsage?.inputTokens ?? 0} / out {run.tokenUsage?.outputTokens ?? 0}
+            <span className="text-muted-foreground">{t('taskDetail.tokensLabel')} </span>
+            {t('taskDetail.tokensValue', {
+              input: String(run.tokenUsage?.inputTokens ?? 0),
+              output: String(run.tokenUsage?.outputTokens ?? 0),
+            })}
           </div>
           {run.error && (
             <div className="text-destructive">
-              <span className="text-muted-foreground">Error: </span>
+              <span className="text-muted-foreground">{t('taskDetail.errorLabel')} </span>
               {run.error}
             </div>
           )}
@@ -114,11 +119,11 @@ export default function RunDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Transcript</CardTitle>
+          <CardTitle>{t('taskDetail.transcript')}</CardTitle>
         </CardHeader>
         <CardContent>
           {messages.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No messages recorded.</p>
+            <p className="text-sm text-muted-foreground">{t('taskDetail.noMessages')}</p>
           ) : (
             <ul className="space-y-3">
               {messages.map((msg) => (

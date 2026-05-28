@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { PanelLeftClose, PanelLeftOpen, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authFetch } from '@/lib/auth';
+import { useLanguage } from '@/i18n';
 import { useChat } from './use-chat';
 import { ChatThread } from './chat-thread';
 import { ChatInput, EmptyState } from './chat-input';
@@ -23,6 +24,7 @@ export default function ConversationsPage() {
 function ConversationsInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { t } = useLanguage();
 
   // Initialize to false for SSR, then sync from localStorage after hydration
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -155,7 +157,7 @@ function ConversationsInner() {
             size="icon"
             className="size-8"
             onClick={handleSidebarToggle}
-            title={sidebarOpen ? 'Hide sessions' : 'Show sessions'}
+            title={sidebarOpen ? t('conv.hideSessions') : t('conv.showSessions')}
           >
             {sidebarOpen ? (
               <PanelLeftClose className="size-4" />
@@ -164,8 +166,8 @@ function ConversationsInner() {
             )}
           </Button>
           <span className="text-sm text-muted-foreground">
-            {currentSession?.topic ?? 'Conversations'}
-            {isArchived && <span className="ml-2 text-xs opacity-60">(Archived)</span>}
+            {currentSession?.topic ?? t('conv.title')}
+            {isArchived && <span className="ml-2 text-xs opacity-60">{t('conv.archivedTag')}</span>}
           </span>
         </div>
         {error && (
@@ -196,13 +198,13 @@ function ConversationsInner() {
                   }}
                 >
                   <Square className="size-3" />
-                  Stop
+                  {t('conv.stop')}
                 </Button>
               </div>
             )}
             {isArchived ? (
               <div className="border-t px-6 py-4 text-center text-sm text-muted-foreground">
-                This conversation is archived and read-only.
+                {t('conv.archivedReadOnly')}
               </div>
             ) : (
               <ChatInput

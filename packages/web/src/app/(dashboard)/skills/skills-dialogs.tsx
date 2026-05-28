@@ -17,6 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { authFetch } from '@/lib/auth';
+import { useLanguage } from '@/i18n';
 
 const NAME_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
@@ -29,6 +30,7 @@ export function CreateDialog({
   onClose: () => void;
   onCreated: () => void;
 }) {
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
@@ -45,11 +47,11 @@ export function CreateDialog({
   const handleSubmit = async () => {
     setErr('');
     if (!NAME_REGEX.test(name)) {
-      setErr('Name must be lowercase alphanumeric with hyphens.');
+      setErr(t('skillsUi.errNameFormat'));
       return;
     }
     if (description.trim().length === 0) {
-      setErr('Description is required.');
+      setErr(t('skillsUi.errDescriptionRequired'));
       return;
     }
     setSaving(true);
@@ -63,7 +65,7 @@ export function CreateDialog({
       setDescription('');
       onCreated();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to create skill');
+      setErr(e instanceof Error ? e.message : t('skillsUi.errCreateFailed'));
     } finally {
       setSaving(false);
     }
@@ -73,16 +75,20 @@ export function CreateDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="flex max-h-[90vh] flex-col">
         <DialogHeader>
-          <DialogTitle>Create skill</DialogTitle>
+          <DialogTitle>{t('skillsUi.createTitle')}</DialogTitle>
           <DialogDescription>
-            Scaffolds a new skill under <code>/skills/&lt;name&gt;/SKILL.md</code> in your
-            workspace.
+            {t('skillsUi.createDescBefore')}{' '}
+            <code>/skills/&lt;name&gt;/SKILL.md</code> {t('skillsUi.createDescAfter')}
           </DialogDescription>
         </DialogHeader>
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-          <Input placeholder="skill-name" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input
+            placeholder={t('skillsUi.namePlaceholder')}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
           <Textarea
-            placeholder="What does this skill do, and when should the agent use it?"
+            placeholder={t('skillsUi.descriptionPlaceholder')}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
@@ -91,11 +97,11 @@ export function CreateDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
+            {t('skillsUi.cancel')}
           </Button>
           <Button onClick={() => void handleSubmit()} disabled={saving}>
             {saving ? <Loader2 className="mr-1 size-4 animate-spin" /> : null}
-            Create
+            {t('skillsUi.create')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -112,6 +118,7 @@ export function EditDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useLanguage();
   const [content, setContent] = useState('');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
@@ -134,7 +141,7 @@ export function EditDialog({
       });
       onSaved();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to save');
+      setErr(e instanceof Error ? e.message : t('skillsUi.errSaveFailed'));
     } finally {
       setSaving(false);
     }
@@ -144,11 +151,8 @@ export function EditDialog({
     <Dialog open={target !== null} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="flex max-h-[90vh] !w-[60vw] flex-col !max-w-none">
         <DialogHeader>
-          <DialogTitle>Edit {target.dirName}/SKILL.md</DialogTitle>
-          <DialogDescription>
-            Frontmatter must remain valid (name, description). For more complex edits, use the
-            workspace file editor.
-          </DialogDescription>
+          <DialogTitle>{t('skillsUi.editTitle', { dirName: target.dirName })}</DialogTitle>
+          <DialogDescription>{t('skillsUi.editDesc')}</DialogDescription>
         </DialogHeader>
         <Textarea
           value={content}
@@ -158,11 +162,11 @@ export function EditDialog({
         {err && <p className="text-sm text-destructive">{err}</p>}
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
+            {t('skillsUi.cancel')}
           </Button>
           <Button onClick={() => void handleSave()} disabled={saving}>
             {saving ? <Loader2 className="mr-1 size-4 animate-spin" /> : null}
-            Save
+            {t('skillsUi.save')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -179,6 +183,7 @@ export function RenameDialog({
   onClose: () => void;
   onRenamed: () => void;
 }) {
+  const { t } = useLanguage();
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
@@ -193,7 +198,7 @@ export function RenameDialog({
   const handleSubmit = async () => {
     setErr('');
     if (!NAME_REGEX.test(newName)) {
-      setErr('Name must be lowercase alphanumeric with hyphens.');
+      setErr(t('skillsUi.errNameFormat'));
       return;
     }
     setSaving(true);
@@ -205,7 +210,7 @@ export function RenameDialog({
       });
       onRenamed();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to rename');
+      setErr(e instanceof Error ? e.message : t('skillsUi.errRenameFailed'));
     } finally {
       setSaving(false);
     }
@@ -215,20 +220,21 @@ export function RenameDialog({
     <Dialog open={target !== null} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Rename skill</DialogTitle>
+          <DialogTitle>{t('skillsUi.renameTitle')}</DialogTitle>
           <DialogDescription>
-            The directory and the <code>name:</code> frontmatter field will both be updated.
+            {t('skillsUi.renameDescBefore')} <code>name:</code>{' '}
+            {t('skillsUi.renameDescAfter')}
           </DialogDescription>
         </DialogHeader>
         <Input value={newName} onChange={(e) => setNewName(e.target.value)} />
         {err && <p className="text-sm text-destructive">{err}</p>}
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
+            {t('skillsUi.cancel')}
           </Button>
           <Button onClick={() => void handleSubmit()} disabled={saving}>
             {saving ? <Loader2 className="mr-1 size-4 animate-spin" /> : null}
-            Rename
+            {t('skillsUi.rename')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -250,6 +256,7 @@ export function PreviewDialog({
   onClose: () => void;
   onEdit?: () => void;
 }) {
+  const { t } = useLanguage();
   if (!target) return null;
   return (
     <Dialog open={target !== null} onOpenChange={(o) => !o && onClose()}>
@@ -265,7 +272,9 @@ export function PreviewDialog({
                   : 'border-primary/40 bg-primary/15 text-primary'
               }
             >
-              {target.source}
+              {target.source === 'builtin'
+                ? t('skillsUi.badgeBuiltin')
+                : t('skillsUi.badgeCustom')}
             </Badge>
           </DialogTitle>
           <DialogDescription>
@@ -280,10 +289,10 @@ export function PreviewDialog({
         <DialogFooter>
           {onEdit ? (
             <Button variant="outline" onClick={onEdit}>
-              Edit
+              {t('skillsUi.edit')}
             </Button>
           ) : null}
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={onClose}>{t('skillsUi.close')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -299,6 +308,7 @@ export function DeleteDialog({
   onClose: () => void;
   onDeleted: () => void;
 }) {
+  const { t } = useLanguage();
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
@@ -311,7 +321,7 @@ export function DeleteDialog({
       await authFetch(`/api/v1/skills/${target.dirName}`, { method: 'DELETE' });
       onDeleted();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to delete');
+      setErr(e instanceof Error ? e.message : t('skillsUi.errDeleteFailed'));
     } finally {
       setSaving(false);
     }
@@ -321,20 +331,20 @@ export function DeleteDialog({
     <Dialog open={target !== null} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete skill</DialogTitle>
+          <DialogTitle>{t('skillsUi.deleteTitle')}</DialogTitle>
           <DialogDescription>
-            Permanently deletes <strong>{target.name}</strong> and all its files. This cannot be
-            undone.
+            {t('skillsUi.deleteDescBefore')} <strong>{target.name}</strong>{' '}
+            {t('skillsUi.deleteDescAfter')}
           </DialogDescription>
         </DialogHeader>
         {err && <p className="text-sm text-destructive">{err}</p>}
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
+            {t('skillsUi.cancel')}
           </Button>
           <Button variant="destructive" onClick={() => void handleConfirm()} disabled={saving}>
             {saving ? <Loader2 className="mr-1 size-4 animate-spin" /> : null}
-            Delete
+            {t('skillsUi.delete')}
           </Button>
         </DialogFooter>
       </DialogContent>

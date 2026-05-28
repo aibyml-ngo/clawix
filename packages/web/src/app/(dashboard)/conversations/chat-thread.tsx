@@ -10,17 +10,18 @@ import { formatToolBubble } from '@clawix/shared';
 import type { BubbleState, ToolProgressMode } from '@clawix/shared';
 import { Button } from '@/components/ui/button';
 import { copyToClipboard } from '@/lib/clipboard';
+import { useLanguage } from '@/i18n';
 import type { ChatMessage } from './use-chat';
 
-function formatDateLabel(iso: string): string {
+function formatDateLabel(iso: string, t: (key: string) => string): string {
   const d = new Date(iso);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const msgDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diffDays = Math.floor((today.getTime() - msgDate.getTime()) / 86_400_000);
 
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
+  if (diffDays === 0) return t('conv.today');
+  if (diffDays === 1) return t('conv.yesterday');
 
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
 }
@@ -92,20 +93,21 @@ function AgentMessage({ content, createdAt }: { content: string; createdAt: stri
 }
 
 function CopyButton({ content }: { content: string }) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   return (
     <Button
       variant="ghost"
       size="icon"
       className="size-7"
-      aria-label={copied ? 'Copied' : 'Copy message'}
+      aria-label={copied ? t('conv.copied') : t('conv.copyMessage')}
       onClick={() => {
         void copyToClipboard(content).then((ok) => {
           if (ok) {
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);
           } else {
-            toast.error('Could not copy to clipboard');
+            toast.error(t('conv.copyFailed'));
           }
         });
       }}
@@ -120,12 +122,13 @@ function CopyButton({ content }: { content: string }) {
 }
 
 function TypingIndicator() {
+  const { t } = useLanguage();
   return (
     <div className="flex items-start gap-4">
       <div className="flex size-6 shrink-0 items-center justify-center rounded-full border border-foreground/20 bg-muted">
         <Bot className="size-3.5 animate-pulse" />
       </div>
-      <p className="text-sm text-muted-foreground animate-pulse">Thinking...</p>
+      <p className="text-sm text-muted-foreground animate-pulse">{t('conv.thinking')}</p>
     </div>
   );
 }
@@ -157,6 +160,7 @@ export function ChatThread({
   onLoadMore,
   toolProgressMode,
 }: ChatThreadProps) {
+  const { t } = useLanguage();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevHeightRef = useRef(0);
@@ -304,7 +308,7 @@ export function ChatThread({
                   onLoadMore();
                 }}
               >
-                Load older messages
+                {t('conv.loadOlder')}
               </button>
             </div>
           )}
@@ -321,7 +325,7 @@ export function ChatThread({
             if (msg.role === 'user' && msg.content.startsWith('[Runtime Context]')) return null;
 
             // Date separator
-            const dateLabel = formatDateLabel(msg.createdAt);
+            const dateLabel = formatDateLabel(msg.createdAt, t);
             const showDate = dateLabel !== lastDateLabel;
             lastDateLabel = dateLabel;
 

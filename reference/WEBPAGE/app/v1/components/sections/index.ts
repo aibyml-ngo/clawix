@@ -1,0 +1,10 @@
+export { HeroSection } from "./hero";
+export { ProblemSection } from "./problem";
+export { PositioningSection } from "./positioning";
+export { CorePillarsSection } from "./core-pillars";
+export { HowItWorksSection } from "./how-it-works";
+export { DemoSection } from "./demo";
+export { EnterpriseSection } from "./enterprise";
+export { GitHubSection } from "./github";
+export { FaqSection } from "./faq";
+export { FinalCtaSection } from "./final-cta";

@@ -7,6 +7,7 @@ import { authFetch } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/i18n';
 
 interface TaskRunRow {
   id: string;
@@ -42,6 +43,7 @@ interface TaskRunsResponse {
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useLanguage();
   const [task, setTask] = useState<Task | null>(null);
   const [runs, setRuns] = useState<TaskRunRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,58 +58,58 @@ export default function TaskDetailPage() {
       setTask(taskResp.data);
       setRuns(runsResp.data.runs);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load task');
+      setError(err instanceof Error ? err.message : t('taskDetail.loadError'));
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  if (loading) return <div className="p-6 text-muted-foreground">Loading…</div>;
+  if (loading) return <div className="p-6 text-muted-foreground">{t('taskDetail.loading')}</div>;
   if (error) return <div className="p-6 text-destructive">{error}</div>;
-  if (!task) return <div className="p-6">Task not found.</div>;
+  if (!task) return <div className="p-6">{t('taskDetail.notFound')}</div>;
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{task.name}</h1>
-          <p className="text-sm text-muted-foreground">Task details and run history.</p>
+          <p className="text-sm text-muted-foreground">{t('taskDetail.subtitle')}</p>
         </div>
         <Button variant="outline" onClick={() => router.push('/tasks')}>
-          Back to Tasks
+          {t('taskDetail.backToTasks')}
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Task Info</CardTitle>
+          <CardTitle>{t('taskDetail.taskInfo')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div>
-            <span className="text-muted-foreground">Prompt: </span>
+            <span className="text-muted-foreground">{t('taskDetail.promptLabel')} </span>
             {task.prompt}
           </div>
           <div>
-            <span className="text-muted-foreground">Schedule: </span>
+            <span className="text-muted-foreground">{t('taskDetail.scheduleLabel')} </span>
             <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
               {JSON.stringify(task.schedule)}
             </code>
           </div>
           <div>
-            <span className="text-muted-foreground">Enabled: </span>
-            {task.enabled ? 'yes' : 'no'}
+            <span className="text-muted-foreground">{t('taskDetail.enabledLabel')} </span>
+            {task.enabled ? t('taskDetail.yes') : t('taskDetail.no')}
           </div>
           <div>
-            <span className="text-muted-foreground">Next run: </span>
+            <span className="text-muted-foreground">{t('taskDetail.nextRunLabel')} </span>
             {task.nextRunAt ?? '—'}
           </div>
           {task.lastStatus && (
             <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">Last status: </span>
+              <span className="text-muted-foreground">{t('taskDetail.lastStatusLabel')} </span>
               <Badge
                 variant={
                   task.lastStatus === 'completed'
@@ -126,11 +128,11 @@ export default function TaskDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Runs</CardTitle>
+          <CardTitle>{t('taskDetail.recentRuns')}</CardTitle>
         </CardHeader>
         <CardContent>
           {runs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No runs yet.</p>
+            <p className="text-sm text-muted-foreground">{t('taskDetail.noRuns')}</p>
           ) : (
             <ul className="divide-y">
               {runs.map((run) => (

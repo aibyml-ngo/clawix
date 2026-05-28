@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { authFetch } from '@/lib/auth';
+import { useLanguage } from '@/i18n';
 import type { ApiAgent } from './agents-list';
 
 // ------------------------------------------------------------------ //
@@ -57,6 +58,7 @@ function ProviderModelFields({
   defaultModel?: string;
   idPrefix: string;
 }) {
+  const { t } = useLanguage();
   const [selectedProvider, setSelectedProvider] = useState(
     defaultProvider ?? providers[0]?.name ?? '',
   );
@@ -87,7 +89,7 @@ function ProviderModelFields({
   return (
     <>
       <div className="flex flex-col gap-2">
-        <Label htmlFor={`${idPrefix}-provider`}>Provider</Label>
+        <Label htmlFor={`${idPrefix}-provider`}>{t('agentDialogs.providerLabel')}</Label>
         <select
           name="provider"
           id={`${idPrefix}-provider`}
@@ -107,14 +109,14 @@ function ProviderModelFields({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor={`${idPrefix}-model`}>
-          Model
+          {t('agentDialogs.modelLabel')}
           {loadingModels && <Loader2 className="ml-2 inline size-3 animate-spin text-muted-foreground" />}
         </Label>
         <Input
           id={`${idPrefix}-model`}
           name="model"
           list={`${idPrefix}-model-suggestions`}
-          placeholder={loadingModels ? 'Loading models…' : (currentProvider?.defaultModel || 'model-name')}
+          placeholder={loadingModels ? t('agentDialogs.modelLoadingPlaceholder') : (currentProvider?.defaultModel || 'model-name')}
           defaultValue={defaultModel ?? currentProvider?.defaultModel ?? ''}
           required
         />
@@ -127,8 +129,8 @@ function ProviderModelFields({
         )}
         <p className="text-xs text-muted-foreground">
           {loadingModels
-            ? 'Fetching available models from provider…'
-            : 'Type or select a model. Available models load automatically.'}
+            ? t('agentDialogs.modelFetchingHelp')
+            : t('agentDialogs.modelSelectHelp')}
         </p>
       </div>
     </>
@@ -150,6 +152,7 @@ export function CreateAgentDialog({
   saving: boolean;
   onSubmit: (form: FormData) => void;
 }) {
+  const { t } = useLanguage();
   const providers = useProviders();
   const [streamingEnabled, setStreamingEnabled] = useState(false);
 
@@ -157,9 +160,9 @@ export function CreateAgentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Agent</DialogTitle>
+          <DialogTitle>{t('agentDialogs.createTitle')}</DialogTitle>
           <DialogDescription>
-            Define a new AI agent with its model, prompt, and skills.
+            {t('agentDialogs.createDescription')}
           </DialogDescription>
         </DialogHeader>
         <form
@@ -172,29 +175,29 @@ export function CreateAgentDialog({
           className="flex flex-col gap-4"
         >
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-name">Name</Label>
-            <Input id="create-name" name="name" placeholder="Research Assistant" required />
+            <Label htmlFor="create-name">{t('agentDialogs.nameLabel')}</Label>
+            <Input id="create-name" name="name" placeholder={t('agentDialogs.namePlaceholder')} required />
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-description">Description</Label>
+            <Label htmlFor="create-description">{t('agentDialogs.descriptionLabel')}</Label>
             <textarea
               id="create-description"
               name="description"
               rows={2}
               className="rounded-md border bg-background px-3 py-2 text-sm"
-              placeholder="Optional description of this agent"
+              placeholder={t('agentDialogs.descriptionPlaceholder')}
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-systemPrompt">System Prompt</Label>
+            <Label htmlFor="create-systemPrompt">{t('agentDialogs.systemPromptLabel')}</Label>
             <textarea
               id="create-systemPrompt"
               name="systemPrompt"
               rows={6}
               className="rounded-md border bg-background px-3 py-2 text-sm"
-              placeholder="You are a helpful AI assistant..."
+              placeholder={t('agentDialogs.systemPromptPlaceholder')}
               required
             />
           </div>
@@ -205,19 +208,19 @@ export function CreateAgentDialog({
           <ProviderModelFields providers={providers} idPrefix="create" />
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-apiBaseUrl">API Base URL</Label>
+            <Label htmlFor="create-apiBaseUrl">{t('agentDialogs.apiBaseUrlLabel')}</Label>
             <Input
               id="create-apiBaseUrl"
               name="apiBaseUrl"
               placeholder="https://api.example.com/v1"
             />
             <p className="text-xs text-muted-foreground">
-              Optional. Override the default API endpoint for this provider.
+              {t('agentDialogs.apiBaseUrlHelp')}
             </p>
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-maxTokensPerRun">Max Tokens per Run</Label>
+            <Label htmlFor="create-maxTokensPerRun">{t('agentDialogs.maxTokensLabel')}</Label>
             <Input
               id="create-maxTokensPerRun"
               name="maxTokensPerRun"
@@ -228,18 +231,17 @@ export function CreateAgentDialog({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-skillIds">Skill IDs</Label>
-            <Input id="create-skillIds" name="skillIds" placeholder="Comma-separated skill IDs" />
+            <Label htmlFor="create-skillIds">{t('agentDialogs.skillIdsLabel')}</Label>
+            <Input id="create-skillIds" name="skillIds" placeholder={t('agentDialogs.skillIdsPlaceholder')} />
           </div>
 
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label htmlFor="create-streamingEnabled" className="text-base">
-                Streaming
+                {t('agentDialogs.streamingLabel')}
               </Label>
               <p className="text-sm text-muted-foreground">
-                Send each reasoning step as a separate message. When off, the user receives one
-                combined reply at the end of the run.
+                {t('agentDialogs.streamingHelp')}
               </p>
             </div>
             <Switch
@@ -257,11 +259,11 @@ export function CreateAgentDialog({
                 onOpenChange(false);
               }}
             >
-              Cancel
+              {t('agentDialogs.cancel')}
             </Button>
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-              Create Agent
+              {t('agentDialogs.createSubmit')}
             </Button>
           </DialogFooter>
         </form>
@@ -285,6 +287,7 @@ export function EditAgentDialog({
   saving: boolean;
   onSubmit: (id: string, form: FormData) => void;
 }) {
+  const { t } = useLanguage();
   const providers = useProviders();
   const [streamingEnabled, setStreamingEnabled] = useState(agent?.streamingEnabled ?? false);
 
@@ -294,8 +297,8 @@ export function EditAgentDialog({
     <Dialog open={agent !== null} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Agent</DialogTitle>
-          <DialogDescription>Update settings for {agent.name}.</DialogDescription>
+          <DialogTitle>{t('agentDialogs.editTitle')}</DialogTitle>
+          <DialogDescription>{t('agentDialogs.editDescription', { name: agent.name })}</DialogDescription>
         </DialogHeader>
         <form
           onSubmit={(e) => {
@@ -307,12 +310,12 @@ export function EditAgentDialog({
           className="flex flex-col gap-4"
         >
           <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-name">Name</Label>
+            <Label htmlFor="edit-name">{t('agentDialogs.nameLabel')}</Label>
             <Input id="edit-name" name="name" defaultValue={agent.name} required />
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-description">Description</Label>
+            <Label htmlFor="edit-description">{t('agentDialogs.descriptionLabel')}</Label>
             <textarea
               id="edit-description"
               name="description"
@@ -323,7 +326,7 @@ export function EditAgentDialog({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-systemPrompt">System Prompt</Label>
+            <Label htmlFor="edit-systemPrompt">{t('agentDialogs.systemPromptLabel')}</Label>
             <textarea
               id="edit-systemPrompt"
               name="systemPrompt"
@@ -336,9 +339,11 @@ export function EditAgentDialog({
 
           {/* Role cannot be changed; primary is system-only, workers stay workers */}
           <div className="flex flex-col gap-2">
-            <Label>Role</Label>
+            <Label>{t('agentDialogs.roleLabel')}</Label>
             <p className="text-sm text-muted-foreground">
-              {agent.role === 'primary' ? 'Primary (system)' : 'Worker (Sub-Agent)'}
+              {agent.role === 'primary'
+                ? t('agentDialogs.rolePrimary')
+                : t('agentDialogs.roleWorker')}
             </p>
             <input type="hidden" name="role" value={agent.role} />
           </div>
@@ -351,7 +356,7 @@ export function EditAgentDialog({
           />
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-apiBaseUrl">API Base URL</Label>
+            <Label htmlFor="edit-apiBaseUrl">{t('agentDialogs.apiBaseUrlLabel')}</Label>
             <Input
               id="edit-apiBaseUrl"
               name="apiBaseUrl"
@@ -359,12 +364,12 @@ export function EditAgentDialog({
               placeholder="https://api.example.com/v1"
             />
             <p className="text-xs text-muted-foreground">
-              Optional. Override the default API endpoint for this provider.
+              {t('agentDialogs.apiBaseUrlHelp')}
             </p>
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-maxTokensPerRun">Max Tokens per Run</Label>
+            <Label htmlFor="edit-maxTokensPerRun">{t('agentDialogs.maxTokensLabel')}</Label>
             <Input
               id="edit-maxTokensPerRun"
               name="maxTokensPerRun"
@@ -376,15 +381,15 @@ export function EditAgentDialog({
 
           {agent.role !== 'primary' && (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="edit-isActive">Status</Label>
+              <Label htmlFor="edit-isActive">{t('agentDialogs.statusLabel')}</Label>
               <select
                 name="isActive"
                 id="edit-isActive"
                 className="rounded-md border bg-background px-3 py-2 text-sm"
                 defaultValue={agent.isActive ? 'true' : 'false'}
               >
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
+                <option value="true">{t('agentDialogs.statusActive')}</option>
+                <option value="false">{t('agentDialogs.statusInactive')}</option>
               </select>
             </div>
           )}
@@ -392,11 +397,10 @@ export function EditAgentDialog({
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label htmlFor="edit-streamingEnabled" className="text-base">
-                Streaming
+                {t('agentDialogs.streamingLabel')}
               </Label>
               <p className="text-sm text-muted-foreground">
-                Send each reasoning step as a separate message. When off, the user receives one
-                combined reply at the end of the run.
+                {t('agentDialogs.streamingHelp')}
               </p>
             </div>
             <Switch
@@ -414,11 +418,11 @@ export function EditAgentDialog({
                 onOpenChange(false);
               }}
             >
-              Cancel
+              {t('agentDialogs.cancel')}
             </Button>
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-              Save
+              {t('agentDialogs.editSubmit')}
             </Button>
           </DialogFooter>
         </form>

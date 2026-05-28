@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getAccessToken } from '@/lib/auth';
 import { formatFileSize } from '@/lib/format';
+import { useLanguage } from '@/i18n';
 
 const API_BASE = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 
@@ -71,6 +72,7 @@ interface UploadItem {
 }
 
 export function UploadZone({ currentPath, onUploadComplete, onClose }: UploadZoneProps) {
+  const { t } = useLanguage();
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,7 +87,7 @@ export function UploadZone({ currentPath, onUploadComplete, onClose }: UploadZon
       if (file.size > MAX_FILE_SIZE) {
         updateUpload(index, {
           status: 'error',
-          error: `File exceeds ${formatFileSize(MAX_FILE_SIZE)} limit`,
+          error: t('workspace.errorFileTooLarge', { size: formatFileSize(MAX_FILE_SIZE) }),
         });
         return;
       }
@@ -94,7 +96,7 @@ export function UploadZone({ currentPath, onUploadComplete, onClose }: UploadZon
 
       const token = await getAccessToken();
       if (!token) {
-        updateUpload(index, { status: 'error', error: 'Not authenticated' });
+        updateUpload(index, { status: 'error', error: t('workspace.notAuthenticated') });
         return;
       }
 
@@ -123,23 +125,23 @@ export function UploadZone({ currentPath, onUploadComplete, onClose }: UploadZon
             updateUpload(index, { status: 'done', progress: 100 });
             onUploadComplete();
           } else if (xhr.status === 409) {
-            updateUpload(index, { status: 'error', error: 'File already exists' });
+            updateUpload(index, { status: 'error', error: t('workspace.errorFileExists') });
           } else {
             updateUpload(index, {
               status: 'error',
-              error: `Upload failed (${xhr.status})`,
+              error: t('workspace.errorUploadStatus', { status: xhr.status }),
             });
           }
           resolve();
         });
 
         xhr.addEventListener('error', () => {
-          updateUpload(index, { status: 'error', error: 'Network error' });
+          updateUpload(index, { status: 'error', error: t('workspace.errorNetwork') });
           resolve();
         });
 
         xhr.addEventListener('abort', () => {
-          updateUpload(index, { status: 'error', error: 'Upload cancelled' });
+          updateUpload(index, { status: 'error', error: t('workspace.errorUploadCancelled') });
           resolve();
         });
 
@@ -148,7 +150,7 @@ export function UploadZone({ currentPath, onUploadComplete, onClose }: UploadZon
         xhr.send(formData);
       });
     },
-    [currentPath, onUploadComplete, updateUpload],
+    [currentPath, onUploadComplete, updateUpload, t],
   );
 
   const addFiles = useCallback(
@@ -283,25 +285,25 @@ export function UploadZone({ currentPath, onUploadComplete, onClose }: UploadZon
           <FolderUp className="h-8 w-8" />
         </div>
         <p className="text-sm">
-          Drop files here,{' '}
+          {t('workspace.dropFilesHere')}{' '}
           <button
             type="button"
             onClick={handleBrowseClick}
             className="cursor-pointer font-medium text-amber-500 underline-offset-4 hover:underline focus:outline-none"
           >
-            browse files
+            {t('workspace.browseFiles')}
           </button>
-          , or{' '}
+          {t('workspace.dropFilesOr')}{' '}
           <button
             type="button"
             onClick={handleFolderBrowseClick}
             className="cursor-pointer font-medium text-amber-500 underline-offset-4 hover:underline focus:outline-none"
           >
-            upload folder
+            {t('workspace.uploadFolder')}
           </button>
         </p>
         <p className="text-xs text-muted-foreground">
-          Max file size: {formatFileSize(MAX_FILE_SIZE)}
+          {t('workspace.maxFileSize', { size: formatFileSize(MAX_FILE_SIZE) })}
         </p>
       </div>
 
@@ -349,12 +351,12 @@ export function UploadZone({ currentPath, onUploadComplete, onClose }: UploadZon
               )}
 
               {item.status === 'done' && (
-                <span className="text-xs font-medium text-green-500">Done</span>
+                <span className="text-xs font-medium text-green-500">{t('workspace.done')}</span>
               )}
 
               {item.status === 'error' && (
                 <span className="text-xs font-medium text-destructive">
-                  {item.error ?? 'Upload failed'}
+                  {item.error ?? t('workspace.errorUpload')}
                 </span>
               )}
             </li>
@@ -366,7 +368,7 @@ export function UploadZone({ currentPath, onUploadComplete, onClose }: UploadZon
       <div className="flex justify-end">
         <Button variant="ghost" size="sm" onClick={onClose}>
           <X className="mr-1 h-4 w-4" />
-          Close
+          {t('workspace.close')}
         </Button>
       </div>
     </div>

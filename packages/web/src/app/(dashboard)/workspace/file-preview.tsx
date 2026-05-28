@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatFileSize } from '@/lib/format';
+import { useLanguage } from '@/i18n';
 import { ImagePreview } from './image-preview';
 import type { FileContent } from '@clawix/shared';
 
@@ -19,6 +20,7 @@ interface FilePreviewProps {
 }
 
 export function FilePreview({ file, isLoading, onClose, onEdit, onFullPreview }: FilePreviewProps) {
+  const { t } = useLanguage();
   if (isLoading) {
     return (
       <Card className="flex h-full items-center justify-center">
@@ -30,7 +32,7 @@ export function FilePreview({ file, isLoading, onClose, onEdit, onFullPreview }:
   if (!file) {
     return (
       <Card className="flex h-full items-center justify-center">
-        <p className="text-sm text-muted-foreground">Select a file to preview</p>
+        <p className="text-sm text-muted-foreground">{t('workspace.selectToPreview')}</p>
       </Card>
     );
   }
@@ -54,7 +56,7 @@ export function FilePreview({ file, isLoading, onClose, onEdit, onFullPreview }:
               size="icon"
               className="size-7 shrink-0"
               onClick={onFullPreview}
-              title="Full preview"
+              title={t('workspace.fullPreview')}
             >
               <Eye className="size-3.5" />
             </Button>
@@ -67,7 +69,7 @@ export function FilePreview({ file, isLoading, onClose, onEdit, onFullPreview }:
                 size="icon"
                 className="size-7 shrink-0"
                 onClick={onEdit}
-                title="Edit file"
+                title={t('workspace.editFile')}
               >
                 <Pencil className="size-3.5" />
               </Button>
@@ -86,8 +88,8 @@ export function FilePreview({ file, isLoading, onClose, onEdit, onFullPreview }:
               <FileWarning className="size-8 text-muted-foreground/50" />
               <p className="text-sm text-muted-foreground">
                 {file.truncated
-                  ? 'File is too large to preview (> 1 MB)'
-                  : 'Binary file — preview not available'}
+                  ? t('workspace.tooLargeToPreview')
+                  : t('workspace.binaryNotAvailable')}
               </p>
             </div>
           )
