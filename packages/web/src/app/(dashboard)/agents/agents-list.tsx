@@ -24,6 +24,7 @@ import {
 import { authFetch } from '@/lib/auth';
 import { useAnimeOnMount, staggerFadeUp, STAGGER } from '@/lib/anime';
 import { SuccessDialog } from '@/components/ui/success-dialog';
+import { useLanguage } from '@/i18n';
 import { CreateAgentDialog, EditAgentDialog } from './agents-dialogs';
 
 // ------------------------------------------------------------------ //
@@ -88,6 +89,7 @@ function serializeSorts(sorts: SortEntry[]): string {
 // ------------------------------------------------------------------ //
 
 export function AgentsList() {
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [agents, setAgents] = useState<ApiAgent[]>([]);
@@ -166,11 +168,11 @@ export function AgentsList() {
       const res = await authFetch<PaginatedAgents>('/api/v1/agents?limit=100');
       setAgents(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load agents');
+      setError(err instanceof Error ? err.message : t('agentsList.loadError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void fetchAgents();
@@ -201,9 +203,9 @@ export function AgentsList() {
       });
       setCreateOpen(false);
       await fetchAgents();
-      setSuccessMessage(`${form.get('name')} has been created.`);
+      setSuccessMessage(t('agentsList.created', { name: String(form.get('name') ?? '') }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create agent');
+      setError(err instanceof Error ? err.message : t('agentsList.createError'));
     } finally {
       setSaving(false);
     }
@@ -235,7 +237,7 @@ export function AgentsList() {
       setEditAgent(null);
       await fetchAgents();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update agent');
+      setError(err instanceof Error ? err.message : t('agentsList.updateError'));
     } finally {
       setSaving(false);
     }
@@ -251,7 +253,7 @@ export function AgentsList() {
       });
       await fetchAgents();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update agent');
+      setError(err instanceof Error ? err.message : t('agentsList.updateError'));
     } finally {
       setSaving(false);
     }
@@ -261,10 +263,8 @@ export function AgentsList() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Agent Definitions</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage AI agent definitions and monitor their runs.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">{t('agentsList.title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('agentsList.subtitle')}</p>
         </div>
         <Button
           onClick={() => {
@@ -272,7 +272,7 @@ export function AgentsList() {
           }}
         >
           <Plus className="mr-2 size-4" />
-          Create Agent
+          {t('agentsList.createAgent')}
         </Button>
       </div>
 
@@ -288,7 +288,7 @@ export function AgentsList() {
         </div>
       ) : agents.length === 0 ? (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm p-8 text-center text-sm text-muted-foreground">
-          No agents configured.
+          {t('agentsList.noAgents')}
         </div>
       ) : (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm">
@@ -301,7 +301,7 @@ export function AgentsList() {
                     toggleSort('name');
                   }}
                 >
-                  Agent {getSortIcon('name')}
+                  {t('agentsList.colAgent')} {getSortIcon('name')}
                 </TableHead>
                 <TableHead
                   className="cursor-pointer select-none"
@@ -309,7 +309,7 @@ export function AgentsList() {
                     toggleSort('model');
                   }}
                 >
-                  Model {getSortIcon('model')}
+                  {t('agentsList.colModel')} {getSortIcon('model')}
                 </TableHead>
                 <TableHead
                   className="cursor-pointer select-none"
@@ -317,7 +317,7 @@ export function AgentsList() {
                     toggleSort('role');
                   }}
                 >
-                  Role {getSortIcon('role')}
+                  {t('agentsList.colRole')} {getSortIcon('role')}
                 </TableHead>
                 <TableHead
                   className="cursor-pointer select-none"
@@ -325,16 +325,16 @@ export function AgentsList() {
                     toggleSort('type');
                   }}
                 >
-                  Type {getSortIcon('type')}
+                  {t('agentsList.colType')} {getSortIcon('type')}
                 </TableHead>
-                <TableHead>Skills</TableHead>
+                <TableHead>{t('agentsList.colSkills')}</TableHead>
                 <TableHead
                   className="cursor-pointer select-none"
                   onClick={() => {
                     toggleSort('enabled');
                   }}
                 >
-                  Enabled {getSortIcon('enabled')}
+                  {t('agentsList.colEnabled')} {getSortIcon('enabled')}
                 </TableHead>
                 <TableHead className="w-[50px]" />
               </TableRow>
@@ -353,22 +353,24 @@ export function AgentsList() {
                   </TableCell>
                   <TableCell>
                     <Badge variant={agent.role === 'primary' ? 'default' : 'secondary'}>
-                      {agent.role}
+                      {agent.role === 'primary'
+                        ? t('agentsList.rolePrimary')
+                        : t('agentsList.roleWorker')}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     {agent.isOfficial ? (
-                      <Badge variant="outline">Public</Badge>
+                      <Badge variant="outline">{t('agentsList.typePublic')}</Badge>
                     ) : (
-                      <Badge variant="secondary">Private</Badge>
+                      <Badge variant="secondary">{t('agentsList.typePrivate')}</Badge>
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{agent.skillIds.length} skills</Badge>
+                    <Badge variant="outline">{t('agentsList.skillsCount', { n: agent.skillIds.length })}</Badge>
                   </TableCell>
                   <TableCell>
                     {agent.role === 'primary' ? (
-                      <span className="text-muted-foreground text-sm">Always on</span>
+                      <span className="text-muted-foreground text-sm">{t('agentsList.alwaysOn')}</span>
                     ) : (
                       <Switch
                         checked={agent.isActive}
@@ -392,10 +394,10 @@ export function AgentsList() {
                             setEditAgent(agent);
                           }}
                         >
-                          Edit
+                          {t('agentsList.edit')}
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link href={`/agents/${agent.id}`}>View Runs</Link>
+                          <Link href={`/agents/${agent.id}`}>{t('agentsList.viewRuns')}</Link>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -430,7 +432,7 @@ export function AgentsList() {
         onOpenChange={(open) => {
           if (!open) setSuccessMessage('');
         }}
-        title="Agent Created"
+        title={t('agentsList.agentCreated')}
         description={successMessage}
       />
     </div>

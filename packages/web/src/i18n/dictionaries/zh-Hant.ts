@@ -357,6 +357,32 @@ export const zhHant: Dictionary = {
     roleAgent: '代理',
   },
 
+  agentsList: {
+    title: '代理定義',
+    subtitle: '管理 AI 代理定義並監控其執行。',
+    createAgent: '建立代理',
+    loadError: '載入代理失敗',
+    createError: '建立代理失敗',
+    updateError: '更新代理失敗',
+    created: '{name} 已建立。',
+    noAgents: '尚未設定代理。',
+    colAgent: '代理',
+    colModel: '模型',
+    colRole: '角色',
+    colType: '類型',
+    colSkills: '技能',
+    colEnabled: '啟用',
+    rolePrimary: '主要',
+    roleWorker: '工作者',
+    typePublic: '公開',
+    typePrivate: '私有',
+    skillsCount: '{n} 項技能',
+    alwaysOn: '永遠開啟',
+    edit: '編輯',
+    viewRuns: '檢視執行',
+    agentCreated: '代理已建立',
+  },
+
   landing: {
     nav: {
       signIn: '登入',

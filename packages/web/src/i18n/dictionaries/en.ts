@@ -355,6 +355,32 @@ export const en = {
     roleAgent: 'Agent',
   },
 
+  agentsList: {
+    title: 'Agent Definitions',
+    subtitle: 'Manage AI agent definitions and monitor their runs.',
+    createAgent: 'Create Agent',
+    loadError: 'Failed to load agents',
+    createError: 'Failed to create agent',
+    updateError: 'Failed to update agent',
+    created: '{name} has been created.',
+    noAgents: 'No agents configured.',
+    colAgent: 'Agent',
+    colModel: 'Model',
+    colRole: 'Role',
+    colType: 'Type',
+    colSkills: 'Skills',
+    colEnabled: 'Enabled',
+    rolePrimary: 'primary',
+    roleWorker: 'worker',
+    typePublic: 'Public',
+    typePrivate: 'Private',
+    skillsCount: '{n} skills',
+    alwaysOn: 'Always on',
+    edit: 'Edit',
+    viewRuns: 'View Runs',
+    agentCreated: 'Agent Created',
+  },
+
   landing: {
     nav: {
       signIn: 'Sign in',
