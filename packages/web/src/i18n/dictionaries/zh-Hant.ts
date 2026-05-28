@@ -319,6 +319,21 @@ export const zhHant: Dictionary = {
     delete: '刪除',
   },
 
+  projector: {
+    title: '投影',
+    eyebrow: '工作台',
+    subtitle: '由你的代理建構的微型工具',
+    loadError: '載入投影項目失敗',
+    empty: '尚無工具。請你的代理為你建立一個！',
+    saving: '儲存 {file} 中…',
+    saved: '已儲存至工作區：{path}',
+    errorPrefix: '錯誤：{message}',
+    notAuthenticated: '未驗證',
+    uploadFailed: '上傳失敗',
+    saveFailed: '儲存失敗',
+    loadItemError: '載入「{name}」失敗',
+  },
+
   landing: {
     nav: {
       signIn: '登入',

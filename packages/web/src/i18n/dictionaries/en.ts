@@ -317,6 +317,21 @@ export const en = {
     delete: 'Delete',
   },
 
+  projector: {
+    title: 'Projector',
+    eyebrow: 'workbench',
+    subtitle: 'Micro-tools built by your agent',
+    loadError: 'Failed to load projector items',
+    empty: 'No tools yet. Ask your agent to build one for you!',
+    saving: 'Saving {file}...',
+    saved: 'Saved to workspace: {path}',
+    errorPrefix: 'Error: {message}',
+    notAuthenticated: 'Not authenticated',
+    uploadFailed: 'Upload failed',
+    saveFailed: 'Save failed',
+    loadItemError: 'Failed to load "{name}"',
+  },
+
   landing: {
     nav: {
       signIn: 'Sign in',

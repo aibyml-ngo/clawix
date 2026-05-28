@@ -5,6 +5,7 @@ import { Loader2, MonitorPlay } from 'lucide-react';
 import { authFetch, getAccessToken } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { useLanguage } from '@/i18n';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -28,10 +29,12 @@ interface ProjectorSaveMessage {
 /* ------------------------------------------------------------------ */
 
 export default function ProjectorPage() {
+  const { t } = useLanguage();
   const [items, setItems] = useState<ProjectorItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saveStatus, setSaveStatus] = useState('');
+  const [saveKind, setSaveKind] = useState<'saving' | 'saved' | 'error' | ''>('');
   const [activeItem, setActiveItem] = useState<string | null>(null);
   const [activeHtml, setActiveHtml] = useState<string | null>(null);
   const [loadingHtml, setLoadingHtml] = useState(false);
@@ -44,11 +47,11 @@ export default function ProjectorPage() {
       );
       setItems(Array.isArray(res.data) ? res.data : []);
     } catch {
-      setError('Failed to load projector items');
+      setError(t('projector.loadError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void fetchItems();
@@ -63,10 +66,11 @@ export default function ProjectorPage() {
       const outputPath = `/Output/Projector/${msg.filename}`;
 
       try {
-        setSaveStatus(`Saving ${msg.filename}...`);
+        setSaveKind('saving');
+        setSaveStatus(t('projector.saving', { file: msg.filename }));
 
         const accessToken = await getAccessToken();
-        if (!accessToken) throw new Error('Not authenticated');
+        if (!accessToken) throw new Error(t('projector.notAuthenticated'));
         const apiBase = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 
         // Convert content to blob
@@ -96,12 +100,14 @@ export default function ProjectorPage() {
         );
         if (!res.ok) {
           const body = await res.json().catch(() => ({ message: res.statusText }));
-          throw new Error((body as { message?: string }).message ?? 'Upload failed');
+          throw new Error((body as { message?: string }).message ?? t('projector.uploadFailed'));
         }
 
-        setSaveStatus(`Saved to workspace: ${outputPath}`);
+        setSaveKind('saved');
+        setSaveStatus(t('projector.saved', { path: outputPath }));
         setTimeout(() => {
           setSaveStatus('');
+          setSaveKind('');
         }, 3000);
 
         // Notify iframe that save succeeded
@@ -110,10 +116,12 @@ export default function ProjectorPage() {
           '*',
         );
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Save failed';
-        setSaveStatus(`Error: ${message}`);
+        const message = err instanceof Error ? err.message : t('projector.saveFailed');
+        setSaveKind('error');
+        setSaveStatus(t('projector.errorPrefix', { message }));
         setTimeout(() => {
           setSaveStatus('');
+          setSaveKind('');
         }, 5000);
 
         iframeRef.current?.contentWindow?.postMessage(
@@ -127,13 +135,14 @@ export default function ProjectorPage() {
     return () => {
       window.removeEventListener('message', handler);
     };
-  }, []);
+  }, [t]);
 
   const openItem = useCallback(async (name: string) => {
     setLoadingHtml(true);
     setActiveItem(name);
     setActiveHtml(null);
     setSaveStatus('');
+    setSaveKind('');
     try {
       const res = await authFetch<{
         success: boolean;
@@ -141,17 +150,18 @@ export default function ProjectorPage() {
       }>(`/api/v1/workspace/projector/${encodeURIComponent(name)}`);
       setActiveHtml(res.data.html);
     } catch {
-      setError(`Failed to load "${name}"`);
+      setError(t('projector.loadItemError', { name }));
       setActiveItem(null);
     } finally {
       setLoadingHtml(false);
     }
-  }, []);
+  }, [t]);
 
   const closeViewer = useCallback(() => {
     setActiveItem(null);
     setActiveHtml(null);
     setSaveStatus('');
+    setSaveKind('');
   }, []);
 
   if (loading) {
@@ -167,12 +177,12 @@ export default function ProjectorPage() {
       {/* Header */}
       <div className="border-b border-border/60 pb-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Projector</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('projector.title')}</h1>
           <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground/70">
-            workbench
+            {t('projector.eyebrow')}
           </span>
         </div>
-        <p className="text-sm text-muted-foreground">Micro-tools built by your agent</p>
+        <p className="text-sm text-muted-foreground">{t('projector.subtitle')}</p>
       </div>
 
       {/* Error */}
@@ -186,9 +196,7 @@ export default function ProjectorPage() {
       {items.length === 0 && !error && (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
           <MonitorPlay className="mb-3 size-10 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            No tools yet. Ask your agent to build one for you!
-          </p>
+          <p className="text-sm text-muted-foreground">{t('projector.empty')}</p>
         </div>
       )}
 
@@ -222,16 +230,16 @@ export default function ProjectorPage() {
           showCloseButton
           className="flex h-[85vh] !w-[70vw] !max-w-none flex-col gap-0 p-0 overflow-hidden [&>[data-slot=dialog-close]]:z-50 [&>[data-slot=dialog-close]]:bg-background/80 [&>[data-slot=dialog-close]]:rounded-full [&>[data-slot=dialog-close]]:p-1"
         >
-          <DialogTitle className="sr-only">{activeItem ?? 'Projector'}</DialogTitle>
+          <DialogTitle className="sr-only">{activeItem ?? t('projector.title')}</DialogTitle>
 
           {/* Save status bar */}
           {saveStatus && (
             <div
               className={cn(
                 'px-4 py-2 text-xs font-medium',
-                saveStatus.startsWith('Error')
+                saveKind === 'error'
                   ? 'bg-destructive/20 text-destructive'
-                  : saveStatus.startsWith('Saving')
+                  : saveKind === 'saving'
                     ? 'bg-amber-500/20 text-amber-400'
                     : 'bg-green-500/20 text-green-400',
               )}
@@ -250,7 +258,7 @@ export default function ProjectorPage() {
               srcDoc={activeHtml}
               sandbox="allow-scripts allow-forms allow-modals allow-downloads allow-popups allow-popups-to-escape-sandbox allow-same-origin"
               className="h-full w-full border-0"
-              title={activeItem ?? 'Projector'}
+              title={activeItem ?? t('projector.title')}
             />
           ) : null}
         </DialogContent>
