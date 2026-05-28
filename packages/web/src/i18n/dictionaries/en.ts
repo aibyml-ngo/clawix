@@ -332,6 +332,29 @@ export const en = {
     loadItemError: 'Failed to load "{name}"',
   },
 
+  packDetail: {
+    loadError: 'Failed to load pack',
+    back: 'Back',
+    notFound: 'Pack not found',
+    allPacks: 'All packs',
+    tryConversations: 'Try these conversations',
+    agents: 'Agents',
+    coordinator: 'Coordinator',
+    specialistAgents: 'Specialist Agents',
+    guardAgents: 'Guard Agents',
+    subAgents: 'Sub-agents',
+    skills: 'Skills',
+    governance: 'Governance',
+    guardrails: 'Guardrails',
+    humanInLoop: 'Human-in-loop actions',
+    modelsUsed: 'Models used',
+    spawns: 'Spawns: {list}',
+    roleCoordinator: 'Coordinator',
+    roleGuard: 'Guard',
+    roleSubagent: 'Subagent',
+    roleAgent: 'Agent',
+  },
+
   landing: {
     nav: {
       signIn: 'Sign in',

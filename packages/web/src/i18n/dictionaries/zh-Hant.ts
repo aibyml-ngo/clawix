@@ -334,6 +334,29 @@ export const zhHant: Dictionary = {
     loadItemError: '載入「{name}」失敗',
   },
 
+  packDetail: {
+    loadError: '載入套件失敗',
+    back: '返回',
+    notFound: '找不到套件',
+    allPacks: '所有套件',
+    tryConversations: '試試這些對話',
+    agents: '代理',
+    coordinator: '協調者',
+    specialistAgents: '專家代理',
+    guardAgents: '守衛代理',
+    subAgents: '子代理',
+    skills: '技能',
+    governance: '治理',
+    guardrails: '防護規則',
+    humanInLoop: '需人工介入的操作',
+    modelsUsed: '使用的模型',
+    spawns: '衍生：{list}',
+    roleCoordinator: '協調者',
+    roleGuard: '守衛',
+    roleSubagent: '子代理',
+    roleAgent: '代理',
+  },
+
   landing: {
     nav: {
       signIn: '登入',
