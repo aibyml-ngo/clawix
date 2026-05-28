@@ -383,6 +383,33 @@ export const zhHant: Dictionary = {
     agentCreated: '代理已建立',
   },
 
+  agentDetail: {
+    loadError: '載入代理失敗',
+    backToAgents: '返回代理列表',
+    notFound: '找不到代理。',
+    rolePrimary: '主要',
+    roleWorker: '工作者',
+    alwaysOn: '永遠開啟',
+    active: '啟用',
+    inactive: '停用',
+    details: '詳情',
+    systemPrompt: '系統提示',
+    provider: '供應商',
+    model: '模型',
+    skills: '技能',
+    skillCount: '{n} 項技能',
+    maxTokens: '每次執行最大權杖',
+    created: '建立時間',
+    runHistory: '執行紀錄',
+    totalCount: '（共 {n}）',
+    noRuns: '此代理尚無執行紀錄。',
+    colStatus: '狀態',
+    colInput: '輸入',
+    colTokens: '權杖',
+    colStarted: '開始時間',
+    colDuration: '時長',
+  },
+
   landing: {
     nav: {
       signIn: '登入',

@@ -381,6 +381,33 @@ export const en = {
     agentCreated: 'Agent Created',
   },
 
+  agentDetail: {
+    loadError: 'Failed to load agent',
+    backToAgents: 'Back to Agents',
+    notFound: 'Agent not found.',
+    rolePrimary: 'primary',
+    roleWorker: 'worker',
+    alwaysOn: 'Always on',
+    active: 'Active',
+    inactive: 'Inactive',
+    details: 'Details',
+    systemPrompt: 'System Prompt',
+    provider: 'Provider',
+    model: 'Model',
+    skills: 'Skills',
+    skillCount: '{n} skill(s)',
+    maxTokens: 'Max Tokens per Run',
+    created: 'Created',
+    runHistory: 'Run History',
+    totalCount: '({n} total)',
+    noRuns: 'No runs recorded for this agent yet.',
+    colStatus: 'Status',
+    colInput: 'Input',
+    colTokens: 'Tokens',
+    colStarted: 'Started',
+    colDuration: 'Duration',
+  },
+
   landing: {
     nav: {
       signIn: 'Sign in',
