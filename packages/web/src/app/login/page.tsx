@@ -7,7 +7,9 @@ import { Eye, EyeOff, GalleryVerticalEnd, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { LanguageToggle } from '@/components/language-toggle';
 import { useAuth } from '@/components/auth-provider';
+import { useLanguage } from '@/i18n';
 import { ApiError } from '@/lib/api';
 
 export default function LoginPage() {
@@ -22,6 +24,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -62,7 +65,7 @@ function LoginForm() {
         setWaitTime(seconds);
         setError(err.message);
       } else {
-        setError(err instanceof Error ? err.message : 'Login failed');
+        setError(err instanceof Error ? err.message : t('login.failed'));
       }
     } finally {
       setIsLoading(false);
@@ -72,15 +75,18 @@ function LoginForm() {
   const isDisabled = isLoading || waitTime > 0;
 
   return (
-    <div className="flex min-h-svh w-full">
+    <div className="brand-clawix flex min-h-svh w-full">
       {/* Left panel */}
       <div className="flex flex-1 flex-col gap-4 p-10">
         {/* Logo */}
-        <div className="flex items-center gap-2">
-          <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <GalleryVerticalEnd className="size-4" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <GalleryVerticalEnd className="size-4" />
+            </div>
+            <span className="text-sm font-medium">{t('common.brand')}</span>
           </div>
-          <span className="text-sm font-medium">Clawix</span>
+          <LanguageToggle />
         </div>
 
         {/* Login form */}
@@ -88,10 +94,8 @@ function LoginForm() {
           <div className="flex w-full max-w-[320px] flex-col gap-7">
             {/* Header */}
             <div className="flex flex-col gap-1 text-center">
-              <h1 className="text-2xl font-bold tracking-tight">Login to Clawix</h1>
-              <p className="text-sm text-muted-foreground">
-                Enter your email below to login to your account
-              </p>
+              <h1 className="text-2xl font-bold tracking-tight">{t('login.title')}</h1>
+              <p className="text-sm text-muted-foreground">{t('login.subtitle')}</p>
             </div>
 
             {/* Form */}
@@ -104,7 +108,7 @@ function LoginForm() {
               <div className="flex flex-col gap-6">
                 {/* Email field */}
                 <div className="flex flex-col gap-3">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t('login.email')}</Label>
                   <Input
                     id="email"
                     type="email"
@@ -120,7 +124,7 @@ function LoginForm() {
 
                 {/* Password field */}
                 <div className="flex flex-col gap-3">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">{t('login.password')}</Label>
                   <div className="relative">
                     <Input
                       id="password"
@@ -151,7 +155,7 @@ function LoginForm() {
 
               <Button type="submit" className="w-full" disabled={isDisabled}>
                 {isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
-                {waitTime > 0 ? `Wait ${waitTime}s` : 'Login'}
+                {waitTime > 0 ? t('login.wait', { seconds: waitTime }) : t('login.submit')}
               </Button>
             </form>
           </div>

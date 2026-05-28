@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+:root {
+  /* Clawix Brand Palette */
+  --clawix-bg-light: #ecfefc;
+  --clawix-primary: #090eb3;
+  --clawix-accent: #008be9;
+  --clawix-accent-secondary: #4fc4f1;
+  --clawix-muted: #93a7d7;
+  --clawix-cta: #0054c2;
+  --clawix-teal-dark: #1574a4;
+  --clawix-highlight: #aa5eda;
+  --clawix-success: #17cad2;
+
+  /* Semantic tokens */
+  --background: #ffffff;
+  --foreground: #171717;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --border: #e4e4e7;
+  --ring: #0054c2;
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+
+  /* Brand colors */
+  --color-clawix-bg: var(--clawix-bg-light);
+  --color-clawix-primary: var(--clawix-primary);
+  --color-clawix-accent: var(--clawix-accent);
+  --color-clawix-accent-secondary: var(--clawix-accent-secondary);
+  --color-clawix-muted: var(--clawix-muted);
+  --color-clawix-cta: var(--clawix-cta);
+  --color-clawix-teal: var(--clawix-teal-dark);
+  --color-clawix-highlight: var(--clawix-highlight);
+  --color-clawix-success: var(--clawix-success);
+
+  /* Typography */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Focus ring utility */
+.focus-ring {
+  @apply outline-none ring-2 ring-clawix-cta ring-offset-2;
+}

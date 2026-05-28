@@ -25,6 +25,7 @@ import { useAnimeOnMount, staggerFadeUp, STAGGER } from '@/lib/anime';
 import { useAuth } from '@/components/auth-provider';
 import { DataPagination, type PaginationMeta } from '@/components/ui/data-pagination';
 import { usePaginationParams } from '@/hooks/use-pagination-params';
+import { useLanguage } from '@/i18n';
 
 interface AuditLogEntry {
   id: string;
@@ -83,6 +84,7 @@ function formatDetails(details: Record<string, unknown>): string {
 }
 
 export default function AuditLogsPage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -181,14 +183,14 @@ export default function AuditLogsPage() {
     <div className="flex flex-col gap-6">
       <div className="border-b border-border/60 pb-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Audit Logs</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('audit.title')}</h1>
           <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground/70">
-            ledger
+            {t('audit.eyebrow')}
           </span>
         </div>
         <p className="text-sm text-muted-foreground">
-          Immutable record of all actions and events in your workspace.
-          {!isAdmin && ' Showing your actions only.'}
+          {t('audit.intro')}
+          {!isAdmin && ` ${t('audit.introOwnOnly')}`}
         </p>
       </div>
 
@@ -197,7 +199,7 @@ export default function AuditLogsPage() {
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search logs..."
+            placeholder={t('audit.searchPlaceholder')}
             className="pl-9"
             value={searchQuery}
             onChange={(e) => {
@@ -212,11 +214,11 @@ export default function AuditLogsPage() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-[180px]" aria-label="Filter by action">
-            <SelectValue placeholder="All Actions" />
+          <SelectTrigger className="w-[180px]" aria-label={t('audit.filterByAction')}>
+            <SelectValue placeholder={t('audit.allActions')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Actions</SelectItem>
+            <SelectItem value="all">{t('audit.allActions')}</SelectItem>
             {knownActions.map((a) => (
               <SelectItem key={a} value={a}>
                 {a}
@@ -231,11 +233,11 @@ export default function AuditLogsPage() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-[180px]" aria-label="Filter by resource">
-            <SelectValue placeholder="All Resources" />
+          <SelectTrigger className="w-[180px]" aria-label={t('audit.filterByResource')}>
+            <SelectValue placeholder={t('audit.allResources')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Resources</SelectItem>
+            <SelectItem value="all">{t('audit.allResources')}</SelectItem>
             {knownResources.map((r) => (
               <SelectItem key={r} value={r}>
                 {r}
@@ -243,7 +245,9 @@ export default function AuditLogsPage() {
             ))}
           </SelectContent>
         </Select>
-        <span className="text-sm text-muted-foreground">{meta.total} total entries</span>
+        <span className="text-sm text-muted-foreground">
+          {t('audit.totalEntries', { n: meta.total })}
+        </span>
       </div>
 
       {/* Logs table */}
@@ -253,18 +257,18 @@ export default function AuditLogsPage() {
         </div>
       ) : filteredLogs.length === 0 ? (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm p-8 text-center text-sm text-muted-foreground">
-          No audit log entries found.
+          {t('audit.noEntries')}
         </div>
       ) : (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[160px]">Timestamp</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Resource</TableHead>
-                <TableHead>Details</TableHead>
+                <TableHead className="w-[160px]">{t('audit.colTimestamp')}</TableHead>
+                <TableHead>{t('audit.colUser')}</TableHead>
+                <TableHead>{t('audit.colAction')}</TableHead>
+                <TableHead>{t('audit.colResource')}</TableHead>
+                <TableHead>{t('audit.colDetails')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody data-animate="audit-rows">

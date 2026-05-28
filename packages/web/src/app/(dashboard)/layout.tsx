@@ -7,6 +7,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/s
 import { AppSidebar } from '@/components/dashboard/app-sidebar';
 import { NotificationBell } from '@/components/dashboard/notification-bell';
 import { UnreadChatProvider } from '@/components/dashboard/unread-chat-provider';
+import { LanguageToggle } from '@/components/language-toggle';
 import { Toaster } from '@/components/ui/sonner';
 import { EASING, DURATION } from '@/lib/anime';
 
@@ -51,6 +52,7 @@ export default function DashboardLayout({
         <header className="fixed inset-x-0 top-0 z-50 flex h-14 items-center gap-2 border-b bg-background px-4">
           <SidebarTrigger className="-ml-1" />
           <div className="ml-auto flex items-center gap-2">
+            <LanguageToggle />
             <NotificationBell />
           </div>
         </header>

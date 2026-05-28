@@ -60,6 +60,7 @@ import { formString } from '@/lib/form';
 import { useAnimeOnMount, staggerFadeUp, STAGGER } from '@/lib/anime';
 import { DataPagination, type PaginationMeta } from '@/components/ui/data-pagination';
 import { usePaginationParams } from '@/hooks/use-pagination-params';
+import { useLanguage } from '@/i18n';
 import { GroupsTab } from '../groups-tab';
 
 // ------------------------------------------------------------------ //
@@ -112,14 +113,14 @@ function roleVariant(role: string) {
 // ------------------------------------------------------------------ //
 
 interface Permission {
-  name: string;
+  nameKey: string;
   admin: boolean;
   developer: boolean;
   viewer: boolean;
 }
 
 interface PermissionGroup {
-  category: string;
+  catKey: string;
   permissions: Permission[];
 }
 
@@ -133,60 +134,49 @@ function PermissionIcon({ allowed }: { allowed: boolean }) {
 
 const permissionMatrix: PermissionGroup[] = [
   {
-    category: 'Agents',
+    catKey: 'users.cat.agents',
     permissions: [
-      { name: 'View agent definitions', admin: true, developer: true, viewer: true },
-      { name: 'Create / edit agent', admin: true, developer: true, viewer: false },
-      { name: 'Delete agent', admin: true, developer: false, viewer: false },
-      { name: 'Run agent', admin: true, developer: true, viewer: false },
+      { nameKey: 'users.perm.viewAgentDefs', admin: true, developer: true, viewer: true },
+      { nameKey: 'users.perm.createEditAgent', admin: true, developer: true, viewer: false },
+      { nameKey: 'users.perm.deleteAgent', admin: true, developer: false, viewer: false },
+      { nameKey: 'users.perm.runAgent', admin: true, developer: true, viewer: false },
     ],
   },
   {
-    category: 'Skills',
+    catKey: 'users.cat.skills',
     permissions: [
-      { name: 'Browse marketplace', admin: true, developer: true, viewer: true },
-      { name: 'Submit skill', admin: false, developer: true, viewer: false },
-      { name: 'Approve / reject skill', admin: true, developer: false, viewer: false },
+      { nameKey: 'users.perm.browseMarketplace', admin: true, developer: true, viewer: true },
+      { nameKey: 'users.perm.submitSkill', admin: false, developer: true, viewer: false },
+      { nameKey: 'users.perm.approveSkill', admin: true, developer: false, viewer: false },
     ],
   },
   {
-    category: 'Governance',
+    catKey: 'users.cat.governance',
     permissions: [
-      { name: 'View token usage (org-wide)', admin: true, developer: false, viewer: true },
-      { name: 'View token usage (own)', admin: true, developer: true, viewer: false },
-      { name: 'Set budget alerts', admin: true, developer: false, viewer: false },
-      { name: 'View audit logs', admin: true, developer: true, viewer: true },
-      { name: 'Export audit logs', admin: true, developer: false, viewer: false },
+      { nameKey: 'users.perm.viewTokenOrg', admin: true, developer: false, viewer: true },
+      { nameKey: 'users.perm.viewTokenOwn', admin: true, developer: true, viewer: false },
+      { nameKey: 'users.perm.setBudgetAlerts', admin: true, developer: false, viewer: false },
+      { nameKey: 'users.perm.viewAudit', admin: true, developer: true, viewer: true },
+      { nameKey: 'users.perm.exportAudit', admin: true, developer: false, viewer: false },
     ],
   },
   {
-    category: 'Administration',
+    catKey: 'users.cat.administration',
     permissions: [
-      { name: 'Manage users', admin: true, developer: false, viewer: false },
-      { name: 'Assign roles', admin: true, developer: false, viewer: false },
-      { name: 'Manage policies', admin: true, developer: false, viewer: false },
-      { name: 'Configure providers', admin: true, developer: false, viewer: false },
-      { name: 'Org settings', admin: true, developer: false, viewer: false },
-      { name: 'Manage groups', admin: true, developer: true, viewer: false },
+      { nameKey: 'users.perm.manageUsers', admin: true, developer: false, viewer: false },
+      { nameKey: 'users.perm.assignRoles', admin: true, developer: false, viewer: false },
+      { nameKey: 'users.perm.managePolicies', admin: true, developer: false, viewer: false },
+      { nameKey: 'users.perm.configProviders', admin: true, developer: false, viewer: false },
+      { nameKey: 'users.perm.orgSettings', admin: true, developer: false, viewer: false },
+      { nameKey: 'users.perm.manageGroups', admin: true, developer: true, viewer: false },
     ],
   },
 ];
 
-const roleDescriptions: Record<string, { icon: typeof ShieldCheck; description: string }> = {
-  admin: {
-    icon: ShieldCheck,
-    description:
-      'Full platform control: org settings, user management, RBAC, agent lifecycle, channel config, skill approval, providers, system health.',
-  },
-  developer: {
-    icon: Shield,
-    description:
-      'Build & operate: create agents, write skills, run agents, schedule tasks, monitor usage, manage channels, SDK integration.',
-  },
-  viewer: {
-    icon: Eye,
-    description: 'Read-only: dashboards, audit logs, token reports.',
-  },
+const roleDescriptions: Record<string, { icon: typeof ShieldCheck; descKey: string }> = {
+  admin: { icon: ShieldCheck, descKey: 'users.roleDesc.admin' },
+  developer: { icon: Shield, descKey: 'users.roleDesc.developer' },
+  viewer: { icon: Eye, descKey: 'users.roleDesc.viewer' },
 };
 
 // ------------------------------------------------------------------ //
@@ -219,6 +209,15 @@ function serializeSorts(sorts: SortEntry[]): string {
 }
 
 export default function UsersPage() {
+  const { t } = useLanguage();
+  const roleLabel = (r: string) =>
+    t(
+      r === 'admin'
+        ? 'users.roleAdmin'
+        : r === 'developer'
+          ? 'users.roleDeveloper'
+          : 'users.roleViewer',
+    );
   const searchParams = useSearchParams();
   const router = useRouter();
   const { page, limit, setPage, setLimit } = usePaginationParams();
@@ -281,11 +280,11 @@ export default function UsersPage() {
       }
       setUserAgentMap(map);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      setError(err instanceof Error ? err.message : t('users.loadError'));
     } finally {
       setLoading(false);
     }
-  }, [page, limit]);
+  }, [page, limit, t]);
 
   useEffect(() => {
     void fetchData();
@@ -333,7 +332,7 @@ export default function UsersPage() {
       }
       await fetchData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create user');
+      setError(err instanceof Error ? err.message : t('users.createError'));
     } finally {
       setSaving(false);
     }
@@ -401,7 +400,7 @@ export default function UsersPage() {
       setEditUserAgentId('');
       await fetchData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update user');
+      setError(err instanceof Error ? err.message : t('users.updateError'));
     } finally {
       setSaving(false);
     }
@@ -415,7 +414,7 @@ export default function UsersPage() {
       setDeleteUser(null);
       await fetchData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete user');
+      setError(err instanceof Error ? err.message : t('users.deleteError'));
     } finally {
       setSaving(false);
     }
@@ -494,8 +493,8 @@ export default function UsersPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
-        <p className="text-sm text-muted-foreground">Manage users, roles, and groups.</p>
+        <h1 className="text-2xl font-bold tracking-tight">{t('users.title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('users.subtitle')}</p>
       </div>
 
       {error && (
@@ -513,13 +512,13 @@ export default function UsersPage() {
         <div className="flex items-center justify-between">
           <TabsList className="h-10 rounded-full p-1">
             <TabsTrigger value="users" className="rounded-full px-4">
-              Users
+              {t('users.tabUsers')}
             </TabsTrigger>
             <TabsTrigger value="roles" className="rounded-full px-4">
-              Roles
+              {t('users.tabRoles')}
             </TabsTrigger>
             <TabsTrigger value="groups" className="rounded-full px-4">
-              Groups
+              {t('users.tabGroups')}
             </TabsTrigger>
           </TabsList>
           {tab === 'users' && (
@@ -530,7 +529,7 @@ export default function UsersPage() {
               }}
             >
               <Plus className="mr-1 size-4" />
-              Create User
+              {t('users.createUser')}
             </Button>
           )}
         </div>
@@ -543,7 +542,7 @@ export default function UsersPage() {
             </div>
           ) : users.length === 0 ? (
             <div className="rounded-md border bg-background/30 backdrop-blur-sm p-8 text-center text-sm text-muted-foreground">
-              No users found.
+              {t('users.noUsers')}
             </div>
           ) : (
             <div className="rounded-md border bg-background/30 backdrop-blur-sm">
@@ -556,7 +555,7 @@ export default function UsersPage() {
                         toggleSort('name');
                       }}
                     >
-                      Name {getSortIcon('name')}
+                      {t('users.colName')} {getSortIcon('name')}
                     </TableHead>
                     <TableHead
                       className="cursor-pointer select-none"
@@ -564,7 +563,7 @@ export default function UsersPage() {
                         toggleSort('email');
                       }}
                     >
-                      Email {getSortIcon('email')}
+                      {t('users.colEmail')} {getSortIcon('email')}
                     </TableHead>
                     <TableHead
                       className="cursor-pointer select-none"
@@ -572,7 +571,7 @@ export default function UsersPage() {
                         toggleSort('role');
                       }}
                     >
-                      Role {getSortIcon('role')}
+                      {t('users.colRole')} {getSortIcon('role')}
                     </TableHead>
                     <TableHead
                       className="cursor-pointer select-none"
@@ -580,7 +579,7 @@ export default function UsersPage() {
                         toggleSort('plan');
                       }}
                     >
-                      Policy {getSortIcon('plan')}
+                      {t('users.colPolicy')} {getSortIcon('plan')}
                     </TableHead>
                     <TableHead
                       className="cursor-pointer select-none"
@@ -588,7 +587,7 @@ export default function UsersPage() {
                         toggleSort('status');
                       }}
                     >
-                      Status {getSortIcon('status')}
+                      {t('users.colStatus')} {getSortIcon('status')}
                     </TableHead>
                     <TableHead className="w-[50px]" />
                   </TableRow>
@@ -599,7 +598,7 @@ export default function UsersPage() {
                       <TableCell className="font-medium">{user.name}</TableCell>
                       <TableCell className="text-muted-foreground">{user.email}</TableCell>
                       <TableCell>
-                        <Badge variant={roleVariant(user.role)}>{user.role}</Badge>
+                        <Badge variant={roleVariant(user.role)}>{roleLabel(user.role)}</Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
@@ -608,7 +607,7 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={user.isActive ? 'secondary' : 'outline'}>
-                          {user.isActive ? 'active' : 'inactive'}
+                          {user.isActive ? t('users.active') : t('users.inactive')}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -624,7 +623,7 @@ export default function UsersPage() {
                                 openEditUser(user);
                               }}
                             >
-                              Edit
+                              {t('users.edit')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive"
@@ -632,7 +631,7 @@ export default function UsersPage() {
                                 setDeleteUser(user);
                               }}
                             >
-                              Remove
+                              {t('users.remove')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -659,7 +658,7 @@ export default function UsersPage() {
         <TabsContent value="roles" className="mt-4 space-y-6">
           <div className="grid gap-4 md:grid-cols-3">
             {(['admin', 'developer', 'viewer'] as const).map((role) => {
-              const def = roleDescriptions[role] ?? { icon: Shield, description: '' };
+              const def = roleDescriptions[role] ?? { icon: Shield, descKey: '' };
               const Icon = def.icon;
               const count = roleCounts[role] ?? 0;
               return (
@@ -669,44 +668,44 @@ export default function UsersPage() {
                       <Icon className="size-4" aria-hidden="true" />
                     </div>
                     <div>
-                      <h3 className="font-semibold capitalize">{role}</h3>
+                      <h3 className="font-semibold">{roleLabel(role)}</h3>
                       <p className="text-xs text-muted-foreground">
-                        {count} user{count !== 1 ? 's' : ''}
+                        {t('users.usersCount', { n: count })}
                       </p>
                     </div>
                   </div>
-                  <p className="mt-3 text-sm text-muted-foreground">{def.description}</p>
+                  <p className="mt-3 text-sm text-muted-foreground">{t(def.descKey)}</p>
                 </div>
               );
             })}
           </div>
 
           <div>
-            <h3 className="mb-3 text-sm font-semibold">Permission Matrix</h3>
+            <h3 className="mb-3 text-sm font-semibold">{t('users.permissionMatrix')}</h3>
             <div className="rounded-md border bg-background/30 backdrop-blur-sm">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[300px]">Permission</TableHead>
-                    <TableHead className="text-center">Admin</TableHead>
-                    <TableHead className="text-center">Developer</TableHead>
-                    <TableHead className="text-center">Viewer</TableHead>
+                    <TableHead className="w-[300px]">{t('users.hdrPermission')}</TableHead>
+                    <TableHead className="text-center">{t('users.roleAdmin')}</TableHead>
+                    <TableHead className="text-center">{t('users.roleDeveloper')}</TableHead>
+                    <TableHead className="text-center">{t('users.roleViewer')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {permissionMatrix.map((group) => (
-                    <Fragment key={group.category}>
+                    <Fragment key={group.catKey}>
                       <TableRow>
                         <TableCell
                           colSpan={4}
                           className="bg-muted/50 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
                         >
-                          {group.category}
+                          {t(group.catKey)}
                         </TableCell>
                       </TableRow>
                       {group.permissions.map((perm) => (
-                        <TableRow key={perm.name}>
-                          <TableCell className="text-sm">{perm.name}</TableCell>
+                        <TableRow key={perm.nameKey}>
+                          <TableCell className="text-sm">{t(perm.nameKey)}</TableCell>
                           <TableCell className="text-center">
                             <PermissionIcon allowed={perm.admin} />
                           </TableCell>
@@ -723,9 +722,7 @@ export default function UsersPage() {
                 </TableBody>
               </Table>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Roles are system-defined. Contact your administrator to change a user&apos;s role.
-            </p>
+            <p className="mt-2 text-xs text-muted-foreground">{t('users.rolesSystemDefined')}</p>
           </div>
         </TabsContent>
 
@@ -745,8 +742,8 @@ export default function UsersPage() {
           {createStep === 'form' && (
             <>
               <DialogHeader>
-                <DialogTitle>Create User</DialogTitle>
-                <DialogDescription>Add a new user to the platform.</DialogDescription>
+                <DialogTitle>{t('users.createTitle')}</DialogTitle>
+                <DialogDescription>{t('users.createDesc')}</DialogDescription>
               </DialogHeader>
               <form
                 onSubmit={(e) => {
@@ -757,15 +754,15 @@ export default function UsersPage() {
                 autoComplete="off"
               >
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="create-name">Name</Label>
+                  <Label htmlFor="create-name">{t('users.name')}</Label>
                   <Input id="create-name" name="name" required autoComplete="off" />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="create-email">Email</Label>
+                  <Label htmlFor="create-email">{t('users.email')}</Label>
                   <Input id="create-email" name="email" type="email" required autoComplete="off" />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="create-password">Password</Label>
+                  <Label htmlFor="create-password">{t('users.password')}</Label>
                   <div className="relative">
                     <Input
                       id="create-password"
@@ -793,20 +790,20 @@ export default function UsersPage() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="create-role">Role</Label>
+                  <Label htmlFor="create-role">{t('users.role')}</Label>
                   <select
                     name="role"
                     id="create-role"
                     className="rounded-md border bg-background px-3 py-2 text-sm"
                     defaultValue="developer"
                   >
-                    <option value="admin">Admin</option>
-                    <option value="developer">Developer</option>
-                    <option value="viewer">Viewer</option>
+                    <option value="admin">{t('users.roleAdmin')}</option>
+                    <option value="developer">{t('users.roleDeveloper')}</option>
+                    <option value="viewer">{t('users.roleViewer')}</option>
                   </select>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="create-plan">Policy</Label>
+                  <Label htmlFor="create-plan">{t('users.policy')}</Label>
                   <select
                     name="policyId"
                     id="create-plan"
@@ -826,11 +823,11 @@ export default function UsersPage() {
                 </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={closeCreateDialog}>
-                    Cancel
+                    {t('users.cancel')}
                   </Button>
                   <Button type="submit" disabled={saving}>
                     {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-                    Create
+                    {t('users.create')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -843,14 +840,14 @@ export default function UsersPage() {
                 <Check className="size-8 text-green-500 animate-in zoom-in-50 duration-300" />
               </div>
               <div className="text-center">
-                <h3 className="text-lg font-semibold">User Created</h3>
+                <h3 className="text-lg font-semibold">{t('users.userCreated')}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  <strong>{createdUserName}</strong> has been added to the platform.
+                  {t('users.userCreatedDesc', { name: createdUserName })}
                 </p>
               </div>
               <div className="flex w-full flex-col gap-3">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="assign-agent-def">Assign Primary Agent</Label>
+                  <Label htmlFor="assign-agent-def">{t('users.assignPrimaryAgent')}</Label>
                   <select
                     id="assign-agent-def"
                     className="rounded-md border bg-background px-3 py-2 text-sm"
@@ -860,20 +857,18 @@ export default function UsersPage() {
                     }}
                     disabled={assigningAgent}
                   >
-                    <option value="">Select an agent...</option>
+                    <option value="">{t('users.selectAgent')}</option>
                     {agentDefs.map((a) => (
                       <option key={a.id} value={a.id}>
                         {a.name}
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-muted-foreground">
-                    Assign a primary agent so this user can start conversations.
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t('users.assignAgentHint')}</p>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={closeCreateDialog}>
-                    Skip
+                    {t('users.skip')}
                   </Button>
                   <Button
                     disabled={!selectedAgentId || assigningAgent}
@@ -882,7 +877,7 @@ export default function UsersPage() {
                     }}
                   >
                     {assigningAgent && <Loader2 className="mr-2 size-4 animate-spin" />}
-                    Assign
+                    {t('users.assign')}
                   </Button>
                 </DialogFooter>
               </div>
@@ -895,15 +890,14 @@ export default function UsersPage() {
                 <Check className="size-8 text-green-500 animate-in zoom-in-50 duration-300" />
               </div>
               <div className="text-center">
-                <h3 className="text-lg font-semibold">All Set!</h3>
+                <h3 className="text-lg font-semibold">{t('users.allSet')}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  <strong>{createdUserName}</strong> has been created
                   {createdUserRole === 'viewer'
-                    ? ' with read-only access.'
-                    : ' and assigned a primary agent.'}
+                    ? t('users.allSetViewer', { name: createdUserName })
+                    : t('users.allSetAgent', { name: createdUserName })}
                 </p>
               </div>
-              <Button onClick={closeCreateDialog}>Done</Button>
+              <Button onClick={closeCreateDialog}>{t('users.done')}</Button>
             </div>
           )}
         </DialogContent>
@@ -921,8 +915,8 @@ export default function UsersPage() {
         {editUser && (
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Edit User</DialogTitle>
-              <DialogDescription>Update {editUser.name}&apos;s profile.</DialogDescription>
+              <DialogTitle>{t('users.editTitle')}</DialogTitle>
+              <DialogDescription>{t('users.editDesc', { name: editUser.name })}</DialogDescription>
             </DialogHeader>
             <form
               onSubmit={(e) => {
@@ -942,11 +936,11 @@ export default function UsersPage() {
               className="flex flex-col gap-4"
             >
               <div className="flex flex-col gap-2">
-                <Label htmlFor="edit-name">Name</Label>
+                <Label htmlFor="edit-name">{t('users.name')}</Label>
                 <Input id="edit-name" name="name" defaultValue={editUser.name} required />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="edit-role">Role</Label>
+                <Label htmlFor="edit-role">{t('users.role')}</Label>
                 <select
                   name="role"
                   id="edit-role"
@@ -959,13 +953,13 @@ export default function UsersPage() {
                     }
                   }}
                 >
-                  <option value="admin">Admin</option>
-                  <option value="developer">Developer</option>
-                  <option value="viewer">Viewer</option>
+                  <option value="admin">{t('users.roleAdmin')}</option>
+                  <option value="developer">{t('users.roleDeveloper')}</option>
+                  <option value="viewer">{t('users.roleViewer')}</option>
                 </select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="edit-plan">Policy</Label>
+                <Label htmlFor="edit-plan">{t('users.policy')}</Label>
                 <select
                   name="policyId"
                   id="edit-plan"
@@ -982,19 +976,19 @@ export default function UsersPage() {
                 </select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="edit-status">Status</Label>
+                <Label htmlFor="edit-status">{t('users.colStatus')}</Label>
                 <select
                   name="isActive"
                   id="edit-status"
                   className="rounded-md border bg-background px-3 py-2 text-sm"
                   defaultValue={String(editUser.isActive)}
                 >
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
+                  <option value="true">{t('users.statusActive')}</option>
+                  <option value="false">{t('users.statusInactive')}</option>
                 </select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="edit-agent">Primary Agent</Label>
+                <Label htmlFor="edit-agent">{t('users.primaryAgent')}</Label>
                 <select
                   id="edit-agent"
                   className="rounded-md border bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
@@ -1004,7 +998,7 @@ export default function UsersPage() {
                   }}
                   disabled={editUserRole === 'viewer'}
                 >
-                  <option value="">No agent assigned</option>
+                  <option value="">{t('users.noAgentAssigned')}</option>
                   {agentDefs.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name}
@@ -1013,8 +1007,8 @@ export default function UsersPage() {
                 </select>
                 <p className="text-xs text-muted-foreground">
                   {editUserRole === 'viewer'
-                    ? 'Viewers cannot run agents.'
-                    : 'The primary agent allows this user to start conversations.'}
+                    ? t('users.viewerNoAgents')
+                    : t('users.primaryAgentHint')}
                 </p>
               </div>
               <DialogFooter>
@@ -1025,11 +1019,11 @@ export default function UsersPage() {
                     setEditUser(null);
                   }}
                 >
-                  Cancel
+                  {t('users.cancel')}
                 </Button>
                 <Button type="submit" disabled={saving}>
                   {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-                  Save
+                  {t('users.save')}
                 </Button>
               </DialogFooter>
             </form>
@@ -1049,14 +1043,13 @@ export default function UsersPage() {
         {deleteUser && (
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Remove User</AlertDialogTitle>
+              <AlertDialogTitle>{t('users.removeTitle')}</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to remove <strong>{deleteUser.name}</strong> (
-                {deleteUser.email})? This action cannot be undone.
+                {t('users.removeConfirm', { name: deleteUser.name, email: deleteUser.email })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t('users.cancel')}</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={() => {
@@ -1065,7 +1058,7 @@ export default function UsersPage() {
                 disabled={saving}
               >
                 {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-                Remove
+                {t('users.remove')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

@@ -8,6 +8,7 @@ import mermaid from 'mermaid';
 import { authFetch } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { formatFileSize } from '@/lib/format';
+import { useLanguage } from '@/i18n';
 import { Badge } from '@/components/ui/badge';
 import { ImagePreview } from './image-preview';
 import type { DirectoryListing, FileContent } from '@clawix/shared';
@@ -38,10 +39,13 @@ import { Label } from '@/components/ui/label';
 const INVALID_NAME_PATTERN = /[/\\]/;
 const MAX_NAME_LENGTH = 255;
 
-function validateName(name: string): string | null {
-  if (name.length === 0) return 'Name is required';
-  if (name.length > MAX_NAME_LENGTH) return 'Name must be 255 characters or fewer';
-  if (INVALID_NAME_PATTERN.test(name)) return 'Name cannot contain slashes';
+type TFn = (key: string, params?: Record<string, string | number>) => string;
+
+function validateName(name: string, t: TFn): string | null {
+  if (name.length === 0) return t('workspace.errorNameRequired');
+  if (name.length > MAX_NAME_LENGTH)
+    return t('workspace.errorNameTooLong', { max: MAX_NAME_LENGTH });
+  if (INVALID_NAME_PATTERN.test(name)) return t('workspace.errorNameSlashes');
   return null;
 }
 
@@ -62,16 +66,17 @@ export function CreateDialog({
   onConfirm,
   isLoading,
 }: CreateDialogProps) {
+  const { t } = useLanguage();
   const [name, setName] = useState('');
-  const error = name.length > 0 ? validateName(name) : null;
+  const error = name.length > 0 ? validateName(name, t) : null;
   const isFile = type === 'file';
 
   const handleConfirm = useCallback(() => {
-    if (!validateName(name)) {
+    if (!validateName(name, t)) {
       onConfirm(name);
       setName('');
     }
-  }, [name, onConfirm]);
+  }, [name, onConfirm, t]);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -85,16 +90,22 @@ export function CreateDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Create New {isFile ? 'File' : 'Folder'}</DialogTitle>
+          <DialogTitle>
+            {isFile ? t('workspace.createFileTitle') : t('workspace.createFolderTitle')}
+          </DialogTitle>
           <DialogDescription>
-            Enter a name for the new {isFile ? 'file' : 'folder'}.
+            {isFile ? t('workspace.createFileDescription') : t('workspace.createFolderDescription')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
-          <Label htmlFor="entry-name">Name</Label>
+          <Label htmlFor="entry-name">{t('workspace.nameLabel')}</Label>
           <Input
             id="entry-name"
-            placeholder={isFile ? 'e.g. index.ts' : 'e.g. src'}
+            placeholder={
+              isFile
+                ? t('workspace.fileNamePlaceholder', { example: 'index.ts' })
+                : t('workspace.folderNamePlaceholder', { example: 'src' })
+            }
             value={name}
             onChange={(e) => {
               setName(e.target.value);
@@ -113,10 +124,10 @@ export function CreateDialog({
               handleOpenChange(false);
             }}
           >
-            Cancel
+            {t('workspace.cancel')}
           </Button>
           <Button onClick={handleConfirm} disabled={!name || !!error || isLoading}>
-            {isLoading ? 'Creating...' : 'Create'}
+            {isLoading ? t('workspace.creating') : t('workspace.create')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -145,27 +156,30 @@ export function DeleteDialog({
   onConfirm,
   isLoading,
 }: DeleteDialogProps) {
+  const { t } = useLanguage();
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete &ldquo;{name}&rdquo;?</AlertDialogTitle>
+          <AlertDialogTitle>{t('workspace.deleteTitle', { name })}</AlertDialogTitle>
           <AlertDialogDescription>
             {isDirectory
               ? childCount !== undefined
-                ? `This folder contains ${childCount} ${childCount === 1 ? 'item' : 'items'}. This action cannot be undone.`
-                : 'This folder and all its contents will be deleted. This action cannot be undone.'
-              : 'This action cannot be undone.'}
+                ? childCount === 1
+                  ? t('workspace.deleteFolderCountOne', { count: childCount })
+                  : t('workspace.deleteFolderCountOther', { count: childCount })
+                : t('workspace.deleteFolderDescription')
+              : t('workspace.deleteCannotUndo')}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t('workspace.cancel')}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
             disabled={isLoading}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isLoading ? 'Deleting...' : 'Delete'}
+            {isLoading ? t('workspace.deleting') : t('workspace.delete')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -228,6 +242,7 @@ export function MoveDialog({
   onConfirm,
   isLoading,
 }: MoveDialogProps) {
+  const { t } = useLanguage();
   const [roots, setRoots] = useState<DirNode[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -244,9 +259,9 @@ export function MoveDialog({
         setRoots(dirs);
       })
       .catch(() => {
-        setFetchError('Failed to load directories.');
+        setFetchError(t('workspace.errorLoadDirectories'));
       });
-  }, [open]);
+  }, [open, t]);
 
   const handleToggle = useCallback(async (node: DirNode) => {
     const nextExpanded = !node.expanded;
@@ -304,7 +319,7 @@ export function MoveDialog({
         >
           <button
             type="button"
-            aria-label={node.expanded ? 'Collapse' : 'Expand'}
+            aria-label={node.expanded ? t('workspace.collapse') : t('workspace.expand')}
             className={cn(
               'flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded transition-transform',
               !hasChildren && 'invisible',
@@ -320,7 +335,9 @@ export function MoveDialog({
           </button>
           <Folder className="h-4 w-4 shrink-0 text-amber-500" />
           <span className="truncate">{node.name}</span>
-          {isCurrentDir && <span className="ml-auto text-xs text-muted-foreground">(current)</span>}
+          {isCurrentDir && (
+            <span className="ml-auto text-xs text-muted-foreground">{t('workspace.current')}</span>
+          )}
         </div>
         {node.expanded && node.children !== null && (
           <div>{node.children.map((child) => renderNode(child, depth + 1))}</div>
@@ -335,8 +352,8 @@ export function MoveDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Move &ldquo;{name}&rdquo;</DialogTitle>
-          <DialogDescription>Select a destination folder.</DialogDescription>
+          <DialogTitle>{t('workspace.moveTitle', { name })}</DialogTitle>
+          <DialogDescription>{t('workspace.moveDescription')}</DialogDescription>
         </DialogHeader>
 
         <div className="max-h-72 overflow-y-auto rounded border border-border bg-background p-1">
@@ -354,9 +371,9 @@ export function MoveDialog({
           >
             <span className="h-4 w-4 shrink-0" />
             <Folder className="h-4 w-4 shrink-0 text-amber-500" />
-            <span className="truncate font-medium">Workspace (root)</span>
+            <span className="truncate font-medium">{t('workspace.workspaceRoot')}</span>
             {rootIsCurrentDir && (
-              <span className="ml-auto text-xs text-muted-foreground">(current)</span>
+              <span className="ml-auto text-xs text-muted-foreground">{t('workspace.current')}</span>
             )}
           </div>
 
@@ -372,10 +389,10 @@ export function MoveDialog({
               handleOpenChange(false);
             }}
           >
-            Cancel
+            {t('workspace.cancel')}
           </Button>
           <Button onClick={handleConfirm} disabled={selected === null || isLoading}>
-            {isLoading ? 'Moving...' : 'Move'}
+            {isLoading ? t('workspace.moving') : t('workspace.move')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -393,22 +410,24 @@ interface DiscardDialogProps {
 }
 
 export function DiscardDialog({ filename, open, onOpenChange, onDiscard }: DiscardDialogProps) {
+  const { t } = useLanguage();
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+          <AlertDialogTitle>{t('workspace.discardTitle')}</AlertDialogTitle>
           <AlertDialogDescription>
-            You have unsaved changes to <strong>{filename}</strong>. Discard them?
+            {t('workspace.discardPrefix')} <strong>{filename}</strong>
+            {t('workspace.discardSuffix')}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t('workspace.cancel')}</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             onClick={onDiscard}
           >
-            Discard
+            {t('workspace.discard')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -433,29 +452,30 @@ export function ConflictDialog({
   onOverwrite,
   onReload,
 }: ConflictDialogProps) {
+  const { t } = useLanguage();
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <AlertTriangle className="size-5 text-amber-500" />
-            File Changed
+            {t('workspace.conflictTitle')}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            <strong>{filename}</strong> was modified since you started editing. This may have been
-            caused by an agent or another process.
+            <strong>{filename}</strong>
+            {t('workspace.conflictDescription')}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t('workspace.cancel')}</AlertDialogCancel>
           <Button variant="outline" onClick={onReload}>
-            Reload File
+            {t('workspace.reloadFile')}
           </Button>
           <AlertDialogAction
             className="bg-amber-600 text-white hover:bg-amber-700"
             onClick={onOverwrite}
           >
-            Overwrite
+            {t('workspace.overwrite')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -466,6 +486,7 @@ export function ConflictDialog({
 /* ---------- MermaidBlock ---------- */
 
 function MermaidBlock({ code }: { code: string }) {
+  const { t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -491,7 +512,7 @@ function MermaidBlock({ code }: { code: string }) {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to render diagram');
+          setError(err instanceof Error ? err.message : t('workspace.errorRenderDiagram'));
           setSvg(null);
         }
       });
@@ -499,12 +520,12 @@ function MermaidBlock({ code }: { code: string }) {
     return () => {
       cancelled = true;
     };
-  }, [code]);
+  }, [code, t]);
 
   if (error) {
     return (
       <div className="rounded border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-        <p className="font-medium">Mermaid Error</p>
+        <p className="font-medium">{t('workspace.mermaidError')}</p>
         <pre className="mt-1 text-xs">{error}</pre>
       </div>
     );
@@ -533,6 +554,7 @@ interface FullPreviewDialogProps {
 }
 
 export function FullPreviewDialog({ file, open, onOpenChange, onEdit }: FullPreviewDialogProps) {
+  const { t } = useLanguage();
   if (!file) return null;
 
   const isMarkdown = file.type === 'markdown';
@@ -541,9 +563,15 @@ export function FullPreviewDialog({ file, open, onOpenChange, onEdit }: FullPrev
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col overflow-hidden p-0">
-        <DialogTitle className="sr-only">Preview: {file.name}</DialogTitle>
+        <DialogTitle className="sr-only">
+          {t('workspace.previewTitle', { name: file.name })}
+        </DialogTitle>
         <DialogDescription className="sr-only">
-          Full preview of {file.name} ({file.type}, {formatFileSize(file.size)})
+          {t('workspace.previewDescription', {
+            name: file.name,
+            type: file.type,
+            size: formatFileSize(file.size),
+          })}
         </DialogDescription>
         {/* Header */}
         <div className="flex items-center gap-2 border-b py-4 pl-6 pr-14">
@@ -566,7 +594,7 @@ export function FullPreviewDialog({ file, open, onOpenChange, onEdit }: FullPrev
                   onOpenChange(false);
                   onEdit();
                 }}
-                title="Edit file"
+                title={t('workspace.editFile')}
               >
                 <Pencil className="size-4" />
               </Button>
@@ -583,8 +611,8 @@ export function FullPreviewDialog({ file, open, onOpenChange, onEdit }: FullPrev
               <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
                 <p className="text-sm text-muted-foreground">
                   {file.truncated
-                    ? 'File is too large to preview (> 1 MB)'
-                    : 'Binary file — preview not available'}
+                    ? t('workspace.tooLargeToPreview')
+                    : t('workspace.binaryNotAvailable')}
                 </p>
               </div>
             )

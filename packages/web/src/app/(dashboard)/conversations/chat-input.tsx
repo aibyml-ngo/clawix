@@ -5,6 +5,7 @@ import { Bot, Send, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { authFetch } from '@/lib/auth';
+import { useLanguage } from '@/i18n';
 
 /* ------------------------------------------------------------------ */
 /*  Slash commands & skills                                            */
@@ -12,40 +13,45 @@ import { authFetch } from '@/lib/auth';
 
 interface SlashItem {
   name: string;
+  /** Display description. For builtin commands this is a `conv.*` i18n key resolved at render. */
   description: string;
   type: 'command' | 'skill';
+  /** True when `description` is an i18n key (builtin commands) rather than literal text (skills). */
+  descriptionIsKey?: boolean;
 }
 
 const builtinCommands: SlashItem[] = [
   {
     name: '/reset',
-    description: 'Start a fresh conversation (current session is archived)',
+    description: 'conv.cmdReset',
     type: 'command',
+    descriptionIsKey: true,
   },
   {
     name: '/compact',
-    description: 'Summarize conversation context to free up space',
+    description: 'conv.cmdCompact',
     type: 'command',
+    descriptionIsKey: true,
   },
-  { name: '/help', description: 'Show available commands', type: 'command' },
+  { name: '/help', description: 'conv.cmdHelp', type: 'command', descriptionIsKey: true },
 ];
 
 const suggestions = [
   {
-    title: 'Draft a launch announcement',
-    description: 'for next quarter’s product release',
+    titleKey: 'conv.suggest1Title',
+    descriptionKey: 'conv.suggest1Desc',
   },
   {
-    title: 'Brainstorm campaign ideas',
-    description: 'targeting SMB customers on LinkedIn',
+    titleKey: 'conv.suggest2Title',
+    descriptionKey: 'conv.suggest2Desc',
   },
   {
-    title: 'Summarize this month’s pipeline',
-    description: 'with top deals and risks called out',
+    titleKey: 'conv.suggest3Title',
+    descriptionKey: 'conv.suggest3Desc',
   },
   {
-    title: 'Write a customer follow-up email',
-    description: 'after a discovery call',
+    titleKey: 'conv.suggest4Title',
+    descriptionKey: 'conv.suggest4Desc',
   },
 ];
 
@@ -78,22 +84,27 @@ function SuggestionCard({
 /* ------------------------------------------------------------------ */
 
 export function EmptyState({ onSelectSuggestion }: { onSelectSuggestion: (text: string) => void }) {
+  const { t } = useLanguage();
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-8">
       <div className="flex size-12 items-center justify-center rounded-full border border-foreground/20 bg-muted">
         <Bot className="size-6" />
       </div>
       <div className="grid w-full max-w-[768px] grid-cols-2 gap-2">
-        {suggestions.map((s) => (
-          <SuggestionCard
-            key={s.title}
-            title={s.title}
-            description={s.description}
-            onClick={() => {
-              onSelectSuggestion(`${s.title} ${s.description}`);
-            }}
-          />
-        ))}
+        {suggestions.map((s) => {
+          const title = t(s.titleKey);
+          const description = t(s.descriptionKey);
+          return (
+            <SuggestionCard
+              key={s.titleKey}
+              title={title}
+              description={description}
+              onClick={() => {
+                onSelectSuggestion(`${title} ${description}`);
+              }}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -114,6 +125,7 @@ export function ChatInput({
   isConnected: boolean;
   userMessages?: string[];
 }) {
+  const { t } = useLanguage();
   const [value, setValue] = useState('');
   const [mounted, setMounted] = useState(false);
   const [showCommands, setShowCommands] = useState(false);
@@ -254,7 +266,9 @@ export function ChatInput({
                   <Wrench className="size-3.5 shrink-0 text-muted-foreground" />
                 )}
                 <span className="shrink-0 font-mono font-medium">{cmd.name}</span>
-                <span className="truncate text-muted-foreground">{cmd.description}</span>
+                <span className="truncate text-muted-foreground">
+                  {cmd.descriptionIsKey ? t(cmd.description) : cmd.description}
+                </span>
               </button>
             ))}
           </div>
@@ -264,7 +278,7 @@ export function ChatInput({
           <textarea
             ref={textareaRef}
             rows={1}
-            placeholder="Type / for commands or send a message..."
+            placeholder={t('conv.inputPlaceholder')}
             aria-label="Chat message"
             className="flex-1 resize-none bg-transparent px-2 py-1 text-sm outline-none placeholder:text-muted-foreground"
             value={value}
@@ -357,7 +371,8 @@ export function ChatInput({
                 isConnected ? 'animate-pulse bg-green-500' : 'bg-red-500',
               )}
             />
-            {isConnected ? 'Connected' : 'Disconnected'} &mdash; Clawix agents can make errors.
+            {isConnected ? t('conv.connected') : t('conv.disconnected')} &mdash;{' '}
+            {t('conv.agentDisclaimer')}
           </p>
         )}
       </div>

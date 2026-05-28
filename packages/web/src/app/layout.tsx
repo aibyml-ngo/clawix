@@ -3,6 +3,7 @@ import { GeistSans } from 'geist/font/sans';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider } from '@/components/auth-provider';
 import { ThemeProvider } from '@/components/theme-provider';
+import { LanguageProvider } from '@/i18n';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -28,11 +29,13 @@ export default function RootLayout({
           Skip to main content
         </a>
         <ThemeProvider>
-          <AuthProvider>
-            <TooltipProvider>
-              <div id="main-content">{children}</div>
-            </TooltipProvider>
-          </AuthProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <TooltipProvider>
+                <div id="main-content">{children}</div>
+              </TooltipProvider>
+            </AuthProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

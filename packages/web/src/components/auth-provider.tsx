@@ -8,6 +8,7 @@ import {
   hasSessionCookie,
   login as authLogin,
   logout as authLogout,
+  register as authRegister,
   parseJwtPayload,
 } from '@/lib/auth';
 
@@ -15,6 +16,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -60,13 +62,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(authUser);
   }, []);
 
+  const signup = useCallback(async (name: string, email: string, password: string) => {
+    const authUser = await authRegister(name, email, password);
+    setUser(authUser);
+  }, []);
+
   const logout = useCallback(async () => {
     await authLogout();
     setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );

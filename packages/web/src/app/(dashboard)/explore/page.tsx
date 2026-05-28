@@ -6,6 +6,7 @@ import { Compass, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { authFetch } from '@/lib/auth';
+import { useLanguage } from '@/i18n';
 
 interface PackSummary {
   id: string;
@@ -22,13 +23,14 @@ export default function ExplorePage() {
   const [packs, setPacks] = useState<PackSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { t } = useLanguage();
 
   useEffect(() => {
     authFetch<{ success: boolean; data: PackSummary[] }>('/api/v1/packs')
       .then((res) => setPacks(Array.isArray(res.data) ? res.data : []))
-      .catch(() => setError('Failed to load industry packs'))
+      .catch(() => setError(t('explore.loadError')))
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   if (loading) {
     return (
@@ -42,15 +44,12 @@ export default function ExplorePage() {
     <div className="flex flex-col gap-8">
       <div className="border-b border-border/60 pb-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Explore</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('explore.title')}</h1>
           <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground/70">
-            industry packs
+            {t('explore.eyebrow')}
           </span>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Pre-built skill and agent bundles for specific industries. Pick a pack to see what your
-          agent can do out of the box.
-        </p>
+        <p className="text-sm text-muted-foreground">{t('explore.intro')}</p>
       </div>
 
       {error && (
@@ -62,7 +61,7 @@ export default function ExplorePage() {
       {packs.length === 0 && !error ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Compass className="mb-3 size-10 text-muted-foreground/50" />
-          <p className="text-sm text-muted-foreground">No industry packs found.</p>
+          <p className="text-sm text-muted-foreground">{t('explore.noPacks')}</p>
         </div>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
@@ -95,10 +94,12 @@ export default function ExplorePage() {
                   </p>
                   <div className="flex gap-4 text-xs text-muted-foreground">
                     <span>
-                      <span className="font-medium text-foreground">{pack.skillCount}</span> skills
+                      <span className="font-medium text-foreground">{pack.skillCount}</span>{' '}
+                      {t('explore.skillsLabel')}
                     </span>
                     <span>
-                      <span className="font-medium text-foreground">{pack.agentCount}</span> agents
+                      <span className="font-medium text-foreground">{pack.agentCount}</span>{' '}
+                      {t('explore.agentsLabel')}
                     </span>
                   </div>
                 </CardContent>

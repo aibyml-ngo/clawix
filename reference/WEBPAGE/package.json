@@ -1,0 +1,27 @@
+{
+  "name": "getclawix.com",
+  "version": "1.0.0",
+  "private": true,
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "sharp",
+      "unrs-resolver"
+    ]
+  },
+  "scripts": {
+    "dev": "concurrently -n v1,v2,proxy -c blue,cyan,green \"pnpm dev:v1\" \"pnpm dev:v2\" \"node scripts/dev-proxy.js\"",
+    "dev:v1": "pnpm --filter v1 dev",
+    "dev:v2": "pnpm --filter v2 dev",
+    "dev:proxy": "node scripts/dev-proxy.js",
+    "fetch-docs": "bash scripts/fetch-docs.sh",
+    "build": "pnpm build:v1 && pnpm build:v2 && pnpm merge-outputs",
+    "build:v1": "pnpm --filter v1 build",
+    "build:v2": "pnpm --filter v2 build",
+    "merge-outputs": "node scripts/merge-outputs.js",
+    "lint": "pnpm -r lint"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "http-proxy": "^1.18.1"
+  }
+}

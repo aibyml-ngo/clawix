@@ -11,7 +11,20 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { loginSchema, refreshSchema, type LoginInput, type RefreshInput } from '@clawix/shared';
+import {
+  loginSchema,
+  refreshSchema,
+  registerSchema,
+  sendVerificationSchema,
+  verifyEmailSchema,
+  confirmPaymentSchema,
+  type LoginInput,
+  type RefreshInput,
+  type RegisterInput,
+  type SendVerificationInput,
+  type VerifyEmailInput,
+  type ConfirmPaymentInput,
+} from '@clawix/shared';
 import {
   AUTH_THROTTLE_TTL_MS,
   LOGIN_THROTTLE_BLOCK_MS,
@@ -48,6 +61,20 @@ function clearRefreshCookie(reply: FastifyReply): void {
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: AUTH_THROTTLE_TTL_MS } })
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  async register(
+    @Body(new ZodValidationPipe(registerSchema)) body: RegisterInput,
+    @Req() req: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const tokens = await this.authService.register(body.name, body.email, body.password, body.orgName);
+    setRefreshCookie(req, reply, tokens.refreshToken);
+    return tokens;
+  }
 
   @Public()
   @Throttle({
@@ -107,5 +134,53 @@ export class AuthController {
     const tokens = await this.authService.refresh(refreshToken);
     setRefreshCookie(req, reply, tokens.refreshToken);
     return tokens;
+  }
+
+  // ── Email verification ──────────────────────────────────────────────────
+
+  @Public()
+  @Throttle({ default: { limit: 3, ttl: AUTH_THROTTLE_TTL_MS } })
+  @Post('send-verification')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async sendVerification(
+    @Body(new ZodValidationPipe(sendVerificationSchema)) body: SendVerificationInput,
+  ) {
+    await this.authService.sendVerification(body.email);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 3, ttl: AUTH_THROTTLE_TTL_MS } })
+  @Post('send-welcome')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async sendWelcome(
+    @Body(new ZodValidationPipe(sendVerificationSchema)) body: SendVerificationInput,
+  ) {
+    await this.authService.sendTrainingWelcome(body.email);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: AUTH_THROTTLE_TTL_MS } })
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(
+    @Body(new ZodValidationPipe(verifyEmailSchema)) body: VerifyEmailInput,
+    @Req() req: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const { tokens, paymentToken } = await this.authService.verifyEmail(body.email, body.code);
+    setRefreshCookie(req, reply, tokens.refreshToken);
+    return { accessToken: tokens.accessToken, paymentToken };
+  }
+
+  // ── Payment ─────────────────────────────────────────────────────────────
+
+  @Public()
+  @Post('confirm-payment')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async confirmPayment(
+    @Body(new ZodValidationPipe(confirmPaymentSchema)) body: ConfirmPaymentInput,
+  ) {
+    const userId = await this.authService.resolvePaymentToken(body.paymentToken);
+    await this.authService.confirmPayment(userId, body.planLabel);
   }
 }

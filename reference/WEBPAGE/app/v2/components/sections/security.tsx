@@ -1,0 +1,44 @@
+"use client";
+
+import { Container, KeyRound, ScrollText, ShieldCheck } from "lucide-react";
+import { useTranslations } from "next-intl";
+
+const icons = [Container, KeyRound, ScrollText, ShieldCheck];
+
+export function SecuritySection() {
+  const t = useTranslations("security");
+
+  return (
+    <section id="security" className="py-20 sm:py-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            {t("title")}
+          </h2>
+          <p className="mt-4 text-lg text-[var(--color-text-secondary)]">
+            {t("description")}
+          </p>
+        </div>
+
+        <div className="mx-auto mt-16 grid max-w-4xl gap-6 sm:grid-cols-2">
+          {icons.map((Icon, i) => (
+            <div
+              key={t(`items.${i}.title`)}
+              className="flex items-start gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6"
+            >
+              <div className="shrink-0 rounded-lg bg-[var(--color-accent)]/10 p-2.5 text-[var(--color-accent)]">
+                <Icon className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold">{t(`items.${i}.title`)}</h3>
+                <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                  {t(`items.${i}.description`)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

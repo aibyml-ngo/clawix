@@ -8,6 +8,7 @@ import { resolveToolProgressMode } from '@clawix/shared';
 
 import { authFetch, getAccessToken } from '@/lib/auth';
 import { uuidv4 } from '@/lib/utils';
+import { useLanguage } from '@/i18n';
 
 /**
  * Merge incoming sessions into the existing list, sorted by createdAt desc.
@@ -110,6 +111,13 @@ type ServerEvent =
 /* ------------------------------------------------------------------ */
 
 export function useChat() {
+  const { t } = useLanguage();
+  // Hold `t` in a ref so the stable-identity callbacks below (which intentionally
+  // keep [] / minimal deps) can read the latest translator without changing identity
+  // or triggering WebSocket reconnects when the language switches.
+  const tRef = useRef(t);
+  tRef.current = t;
+
   /* ---- state ---- */
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -173,7 +181,7 @@ export function useChat() {
       setSessionPage(1);
       setHasMoreSessions(res.meta.total > SESSIONS_PER_PAGE);
     } catch {
-      setError('Failed to load sessions');
+      setError(tRef.current('conv.errLoadSessions'));
     } finally {
       setLoadingSessions(false);
     }
@@ -219,7 +227,7 @@ export function useChat() {
   const connectWebSocket = useCallback(async () => {
     const token = await getAccessToken();
     if (!token) {
-      setError('Not authenticated');
+      setError(tRef.current('conv.errNotAuthenticated'));
       return;
     }
 
@@ -443,7 +451,7 @@ export function useChat() {
 
       // Auth failure — don't reconnect, redirect to login
       if (event.code === 4001) {
-        setError('Session expired. Please log in again.');
+        setError(tRef.current('conv.errSessionExpired'));
         return;
       }
 
@@ -456,7 +464,7 @@ export function useChat() {
           void connectWebSocket();
         }, delay);
       } else {
-        setError('Connection lost. Please refresh the page.');
+        setError(tRef.current('conv.errConnectionLost'));
       }
     };
 
@@ -493,7 +501,7 @@ export function useChat() {
       setMessages(mapped);
       setHasMore(res.meta.total > MESSAGE_LIMIT);
     } catch {
-      setError('Failed to load messages');
+      setError(tRef.current('conv.errLoadMessages'));
     } finally {
       setLoadingMessages(false);
     }
@@ -537,7 +545,7 @@ export function useChat() {
   /* ---- send message ---- */
   const sendMessage = useCallback((content: string): boolean => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) {
-      setError('Not connected — message not sent. Try again.');
+      setError(tRef.current('conv.errNotConnected'));
       return false;
     }
 

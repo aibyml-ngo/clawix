@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { authFetch } from '@/lib/auth';
+import { useLanguage } from '@/i18n';
 
 interface PackAgent {
   name: string;
@@ -56,11 +57,14 @@ interface PackDetail {
   };
 }
 
-function agentRoleLabel(agent: PackAgent): { label: string; variant: 'default' | 'secondary' | 'outline' } {
-  if (agent.role === 'primary') return { label: 'Coordinator', variant: 'default' };
-  if (agent.tier === 'GUARD') return { label: 'Guard', variant: 'outline' };
-  if (agent.type === 'subagent') return { label: 'Subagent', variant: 'secondary' };
-  return { label: 'Agent', variant: 'secondary' };
+function agentRoleLabel(agent: PackAgent): {
+  labelKey: string;
+  variant: 'default' | 'secondary' | 'outline';
+} {
+  if (agent.role === 'primary') return { labelKey: 'packDetail.roleCoordinator', variant: 'default' };
+  if (agent.tier === 'GUARD') return { labelKey: 'packDetail.roleGuard', variant: 'outline' };
+  if (agent.type === 'subagent') return { labelKey: 'packDetail.roleSubagent', variant: 'secondary' };
+  return { labelKey: 'packDetail.roleAgent', variant: 'secondary' };
 }
 
 function modelBadgeColor(model: string): string {
@@ -77,6 +81,7 @@ function modelShortName(model: string): string {
 }
 
 export default function PackDetailPage() {
+  const { t } = useLanguage();
   const params = useParams<{ packId: string }>();
   const router = useRouter();
   const [pack, setPack] = useState<PackDetail | null>(null);
@@ -86,9 +91,9 @@ export default function PackDetailPage() {
   useEffect(() => {
     authFetch<{ success: boolean; data: PackDetail }>(`/api/v1/packs/${params.packId}`)
       .then((res) => setPack(res.data))
-      .catch(() => setError('Failed to load pack'))
+      .catch(() => setError(t('packDetail.loadError')))
       .finally(() => setLoading(false));
-  }, [params.packId]);
+  }, [params.packId, t]);
 
   if (loading) {
     return (
@@ -102,9 +107,9 @@ export default function PackDetailPage() {
     return (
       <div className="flex flex-col gap-4">
         <Button variant="ghost" size="sm" className="w-fit" onClick={() => router.back()}>
-          <ArrowLeft className="mr-1 size-4" /> Back
+          <ArrowLeft className="mr-1 size-4" /> {t('packDetail.back')}
         </Button>
-        <p className="text-sm text-destructive">{error || 'Pack not found'}</p>
+        <p className="text-sm text-destructive">{error || t('packDetail.notFound')}</p>
       </div>
     );
   }
@@ -122,7 +127,7 @@ export default function PackDetailPage() {
       {/* Header */}
       <div>
         <Button variant="ghost" size="sm" className="mb-4 -ml-2 w-fit" onClick={() => router.back()}>
-          <ArrowLeft className="mr-1 size-4" /> All packs
+          <ArrowLeft className="mr-1 size-4" /> {t('packDetail.allPacks')}
         </Button>
         <div className="flex items-start gap-5">
           <div
@@ -154,7 +159,7 @@ export default function PackDetailPage() {
           <section className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <Sparkles className="size-4 text-muted-foreground" />
-              <h2 className="text-lg font-semibold">Try these conversations</h2>
+              <h2 className="text-lg font-semibold">{t('packDetail.tryConversations')}</h2>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {pack.inspirations.map((insp) => (
@@ -175,12 +180,12 @@ export default function PackDetailPage() {
           <section className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <Bot className="size-4 text-muted-foreground" />
-              <h2 className="text-lg font-semibold">Agents</h2>
+              <h2 className="text-lg font-semibold">{t('packDetail.agents')}</h2>
             </div>
 
             {primaryAgents.length > 0 && (
               <div className="flex flex-col gap-2">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Coordinator</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('packDetail.coordinator')}</p>
                 {primaryAgents.map((agent) => (
                   <AgentCard key={agent.name} agent={agent} />
                 ))}
@@ -189,7 +194,7 @@ export default function PackDetailPage() {
 
             {workerAgents.length > 0 && (
               <div className="flex flex-col gap-2">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Specialist Agents</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('packDetail.specialistAgents')}</p>
                 {workerAgents.map((agent) => (
                   <AgentCard key={agent.name} agent={agent} />
                 ))}
@@ -198,7 +203,7 @@ export default function PackDetailPage() {
 
             {guardAgents.length > 0 && (
               <div className="flex flex-col gap-2">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Guard Agents</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('packDetail.guardAgents')}</p>
                 {guardAgents.map((agent) => (
                   <AgentCard key={agent.name} agent={agent} />
                 ))}
@@ -207,7 +212,7 @@ export default function PackDetailPage() {
 
             {allSubagents.length > 0 && (
               <div className="flex flex-col gap-2">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Sub-agents</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('packDetail.subAgents')}</p>
                 {(allSubagents as Array<PackAgent | PackSubagent>).map((item) =>
                   'role' in item ? (
                     <AgentCard key={item.name} agent={item as PackAgent} isSubagent />
@@ -227,7 +232,7 @@ export default function PackDetailPage() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm font-medium">
                 <Wrench className="size-4 text-muted-foreground" />
-                Skills ({pack.skills.length})
+                {t('packDetail.skills')} ({pack.skills.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-1.5">
@@ -246,14 +251,14 @@ export default function PackDetailPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-sm font-medium">
                   <Shield className="size-4 text-muted-foreground" />
-                  Governance
+                  {t('packDetail.governance')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
                 {pack.governance.guardrails && pack.governance.guardrails.length > 0 && (
                   <div>
                     <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                      Guardrails
+                      {t('packDetail.guardrails')}
                     </p>
                     <ul className="flex flex-col gap-1">
                       {pack.governance.guardrails.map((rule) => (
@@ -268,7 +273,7 @@ export default function PackDetailPage() {
                 {pack.governance.humanInLoopActions && pack.governance.humanInLoopActions.length > 0 && (
                   <div>
                     <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                      Human-in-loop actions
+                      {t('packDetail.humanInLoop')}
                     </p>
                     <div className="flex flex-wrap gap-1">
                       {pack.governance.humanInLoopActions.map((action) => (
@@ -288,7 +293,7 @@ export default function PackDetailPage() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm font-medium">
                 <Cpu className="size-4 text-muted-foreground" />
-                Models used
+                {t('packDetail.modelsUsed')}
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-1.5">
@@ -314,8 +319,9 @@ export default function PackDetailPage() {
 }
 
 function AgentCard({ agent, isSubagent = false }: { agent: PackAgent; isSubagent?: boolean }) {
+  const { t } = useLanguage();
   const roleInfo = isSubagent
-    ? { label: 'Subagent', variant: 'secondary' as const }
+    ? { labelKey: 'packDetail.roleSubagent', variant: 'secondary' as const }
     : agentRoleLabel(agent);
 
   return (
@@ -325,7 +331,7 @@ function AgentCard({ agent, isSubagent = false }: { agent: PackAgent; isSubagent
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-sm font-medium">{agent.name}</span>
           <Badge variant={roleInfo.variant} className="px-1.5 py-0 text-[10px]">
-            {roleInfo.label}
+            {t(roleInfo.labelKey)}
           </Badge>
           {agent.tier && agent.tier !== 'GUARD' && (
             <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
@@ -339,7 +345,7 @@ function AgentCard({ agent, isSubagent = false }: { agent: PackAgent; isSubagent
         <p className="mt-0.5 text-xs text-muted-foreground">{agent.description}</p>
         {agent.spawns && agent.spawns.length > 0 && (
           <p className="mt-1 text-[10px] text-muted-foreground/70">
-            Spawns: {agent.spawns.join(', ')}
+            {t('packDetail.spawns', { list: agent.spawns.join(', ') })}
           </p>
         )}
       </div>
@@ -348,6 +354,7 @@ function AgentCard({ agent, isSubagent = false }: { agent: PackAgent; isSubagent
 }
 
 function SubagentCard({ subagent }: { subagent: PackSubagent }) {
+  const { t } = useLanguage();
   return (
     <div className="flex items-start gap-3 rounded-lg border border-border/60 bg-card px-4 py-3">
       <Cpu className="mt-0.5 size-4 flex-shrink-0 text-muted-foreground" />
@@ -355,7 +362,7 @@ function SubagentCard({ subagent }: { subagent: PackSubagent }) {
         <div className="flex items-center gap-2">
           <span className="font-mono text-sm font-medium">{subagent.name}</span>
           <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-            Subagent
+            {t('packDetail.roleSubagent')}
           </Badge>
           <span className={`ml-auto text-xs font-medium ${modelBadgeColor(subagent.model)}`}>
             {modelShortName(subagent.model)}

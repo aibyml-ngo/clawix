@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { authFetch } from '@/lib/auth';
+import { useLanguage } from '@/i18n';
 
 interface DashboardStats {
   totalRuns: number;
@@ -58,15 +59,17 @@ function formatDuration(ms: number | null): string {
   return `${mins}m ${remainSecs}s`;
 }
 
-function formatTimeAgo(iso: string): string {
+type TFunc = (key: string, params?: Record<string, string | number>) => string;
+
+function formatTimeAgo(iso: string, t: TFunc): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t('dashboardPage.timeJustNow');
+  if (mins < 60) return t('dashboardPage.timeMinAgo', { n: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t('dashboardPage.timeHourAgo', { n: hours });
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return t('dashboardPage.timeDayAgo', { n: days });
 }
 
 function statusVariant(status: string) {
@@ -83,6 +86,7 @@ function statusVariant(status: string) {
 }
 
 export default function DashboardPage() {
+  const { t } = useLanguage();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentRuns, setRecentRuns] = useState<RecentRun[]>([]);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
@@ -104,11 +108,11 @@ export default function DashboardPage() {
       setRecentRuns(Array.isArray(runsRes) ? runsRes : []);
       setRecentActivity(Array.isArray(activityRes) ? activityRes : []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
+      setError(err instanceof Error ? err.message : t('dashboardPage.loadError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void fetchData();
@@ -116,27 +120,31 @@ export default function DashboardPage() {
 
   const statCards = [
     {
-      title: 'Total Runs',
+      title: t('dashboardPage.statTotalRuns'),
       value: stats ? formatNumber(stats.totalRuns) : '—',
-      subtitle: 'all time',
+      subtitle: t('dashboardPage.statTotalRunsSub'),
       icon: Activity,
     },
     {
-      title: 'Active Agents',
+      title: t('dashboardPage.statActiveAgents'),
       value: stats ? String(stats.activeAgents) : '—',
-      subtitle: 'definitions',
+      subtitle: t('dashboardPage.statActiveAgentsSub'),
       icon: Bot,
     },
     {
-      title: 'Token Usage',
+      title: t('dashboardPage.statTokenUsage'),
       value: stats ? formatNumber(stats.tokenUsage.totalTokens) : '—',
-      subtitle: stats ? `$${stats.tokenUsage.totalEstimatedCostUsd.toFixed(2)} this month` : '',
+      subtitle: stats
+        ? t('dashboardPage.statTokenUsageSub', {
+            cost: stats.tokenUsage.totalEstimatedCostUsd.toFixed(2),
+          })
+        : '',
       icon: Coins,
     },
     {
-      title: 'Pending Tasks',
+      title: t('dashboardPage.statPendingTasks'),
       value: stats ? String(stats.scheduledTasks) : '—',
-      subtitle: 'in queue',
+      subtitle: t('dashboardPage.statPendingTasksSub'),
       icon: CalendarClock,
     },
   ];
@@ -146,14 +154,12 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-6">
         <div className="border-b border-border/60 pb-4">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{t('dashboardPage.title')}</h1>
             <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground/70">
-              overview
+              {t('dashboardPage.overview')}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Here&apos;s an overview of your AI orchestration platform.
-          </p>
+          <p className="text-sm text-muted-foreground">{t('dashboardPage.intro')}</p>
         </div>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -167,14 +173,12 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-6">
         <div className="border-b border-border/60 pb-4">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{t('dashboardPage.title')}</h1>
             <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground/70">
-              overview
+              {t('dashboardPage.overview')}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Here&apos;s an overview of your AI orchestration platform.
-          </p>
+          <p className="text-sm text-muted-foreground">{t('dashboardPage.intro')}</p>
         </div>
 
         {error && (
@@ -203,22 +207,22 @@ export default function DashboardPage() {
           {/* Recent runs table */}
           <Card className="lg:col-span-3">
             <CardHeader>
-              <CardTitle>Recent Agent Runs</CardTitle>
-              <CardDescription>Latest activity across all agents.</CardDescription>
+              <CardTitle>{t('dashboardPage.recentRuns')}</CardTitle>
+              <CardDescription>{t('dashboardPage.recentRunsDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               {recentRuns.length === 0 ? (
                 <div className="py-6 text-center text-sm text-muted-foreground">
-                  No agent runs yet.
+                  {t('dashboardPage.noRuns')}
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Agent</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Time</TableHead>
+                      <TableHead>{t('dashboardPage.colAgent')}</TableHead>
+                      <TableHead>{t('dashboardPage.colStatus')}</TableHead>
+                      <TableHead>{t('dashboardPage.colDuration')}</TableHead>
+                      <TableHead>{t('dashboardPage.colTime')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -232,7 +236,7 @@ export default function DashboardPage() {
                           {formatDuration(run.durationMs)}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {formatTimeAgo(run.startedAt)}
+                          {formatTimeAgo(run.startedAt, t)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -245,13 +249,13 @@ export default function DashboardPage() {
           {/* Recent activity */}
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Latest actions in your workspace.</CardDescription>
+              <CardTitle>{t('dashboardPage.recentActivity')}</CardTitle>
+              <CardDescription>{t('dashboardPage.recentActivityDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               {recentActivity.length === 0 ? (
                 <div className="py-6 text-center text-sm text-muted-foreground">
-                  No activity yet.
+                  {t('dashboardPage.noActivity')}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -265,7 +269,7 @@ export default function DashboardPage() {
                           <span>{activity.resource}</span>
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {formatTimeAgo(activity.createdAt)}
+                          {formatTimeAgo(activity.createdAt, t)}
                         </p>
                       </div>
                     </div>

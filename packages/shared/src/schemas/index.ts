@@ -19,7 +19,32 @@ export {
   type UpdateAgentDefinitionInput,
 } from './agent.schema.js';
 
-export { loginSchema, refreshSchema, type LoginInput, type RefreshInput } from './auth.schema.js';
+export {
+  loginSchema,
+  refreshSchema,
+  registerSchema,
+  sendVerificationSchema,
+  verifyEmailSchema,
+  confirmPaymentSchema,
+  type LoginInput,
+  type RefreshInput,
+  type RegisterInput,
+  type SendVerificationInput,
+  type VerifyEmailInput,
+  type ConfirmPaymentInput,
+} from './auth.schema.js';
+
+export {
+  createDropletSchema,
+  DO_REGIONS,
+  DO_REGION_LABELS,
+  DO_DROPLET_PLANS,
+  DO_GPU_SIZES,
+  type CreateDropletInput,
+  type DoRegion,
+  type DoGpuSize,
+  type DropletPlan,
+} from './droplet.schema.js';
 
 export {
   updateProfileSchema,

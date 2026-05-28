@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { FolderOpen, Loader2 } from 'lucide-react';
 import { authFetch, getAccessToken } from '@/lib/auth';
 import { ApiError } from '@/lib/api';
+import { useLanguage } from '@/i18n';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useAnimeOnMount } from '@/lib/anime/use-anime';
 import { staggerFadeUp, STAGGER } from '@/lib/anime';
@@ -34,6 +35,7 @@ const FileEditor = dynamic(() => import('./file-editor').then((m) => ({ default:
 });
 
 function WorkspacePageContent() {
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const initialPath = searchParams.get('path') ?? '/';
   const [currentPath, setCurrentPath] = useState(initialPath);
@@ -67,11 +69,11 @@ function WorkspacePageContent() {
       setListing(data);
       setCurrentPath(data.path);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load directory');
+      setError(err instanceof Error ? err.message : t('workspace.errorLoadDirectory'));
     } finally {
       setIsLoadingDir(false);
     }
-  }, []);
+  }, [t]);
 
   const fetchFileContent = useCallback(async (entry: FileEntry) => {
     setSelectedPath(entry.path);
@@ -83,12 +85,12 @@ function WorkspacePageContent() {
       );
       setSelectedFile(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load file');
+      setError(err instanceof Error ? err.message : t('workspace.errorLoadFile'));
       setSelectedFile(null);
     } finally {
       setIsLoadingFile(false);
     }
-  }, []);
+  }, [t]);
 
   const handleNavigate = useCallback(
     (path: string) => {
@@ -140,10 +142,10 @@ function WorkspacePageContent() {
         setShowCreateDialog(null);
         fetchDirectory(currentPath);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to create entry');
+        setError(err instanceof Error ? err.message : t('workspace.errorCreate'));
       }
     },
-    [showCreateDialog, currentPath, fetchDirectory],
+    [showCreateDialog, currentPath, fetchDirectory, t],
   );
 
   const handleDelete = useCallback(async () => {
@@ -161,9 +163,9 @@ function WorkspacePageContent() {
       }
       fetchDirectory(currentPath);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete');
+      setError(err instanceof Error ? err.message : t('workspace.errorDelete'));
     }
-  }, [deleteTarget, currentPath, fetchDirectory, selectedPath]);
+  }, [deleteTarget, currentPath, fetchDirectory, selectedPath, t]);
 
   const handleRename = useCallback(
     async (entry: FileEntry, newName: string) => {
@@ -175,10 +177,10 @@ function WorkspacePageContent() {
         });
         fetchDirectory(currentPath);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to rename');
+        setError(err instanceof Error ? err.message : t('workspace.errorRename'));
       }
     },
-    [currentPath, fetchDirectory],
+    [currentPath, fetchDirectory, t],
   );
 
   const handleMove = useCallback(
@@ -193,10 +195,10 @@ function WorkspacePageContent() {
         setMoveTarget(null);
         fetchDirectory(currentPath);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to move');
+        setError(err instanceof Error ? err.message : t('workspace.errorMove'));
       }
     },
-    [moveTarget, currentPath, fetchDirectory],
+    [moveTarget, currentPath, fetchDirectory, t],
   );
 
   const handleDownload = useCallback(async (entry: FileEntry) => {
@@ -209,7 +211,7 @@ function WorkspacePageContent() {
         `${apiBase}/api/v1/workspace/files/download?path=${encodeURIComponent(entry.path)}`,
         { headers: { Authorization: `Bearer ${accessToken}` } },
       );
-      if (!res.ok) throw new Error('Download failed');
+      if (!res.ok) throw new Error(t('workspace.errorDownload'));
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -219,9 +221,9 @@ function WorkspacePageContent() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to download file');
+      setError(err instanceof Error ? err.message : t('workspace.errorDownload'));
     }
-  }, []);
+  }, [t]);
 
   const handleEdit = useCallback(() => {
     setEditing(true);
@@ -254,11 +256,11 @@ function WorkspacePageContent() {
           setPendingContent(content);
           setShowConflictDialog(true);
         } else {
-          setError(err instanceof Error ? err.message : 'Failed to save file');
+          setError(err instanceof Error ? err.message : t('workspace.errorSave'));
         }
       }
     },
-    [selectedFile, currentPath, fetchDirectory],
+    [selectedFile, currentPath, fetchDirectory, t],
   );
 
   const handleCancelEdit = useCallback(() => {
@@ -306,9 +308,9 @@ function WorkspacePageContent() {
       setPendingContent(null);
       fetchDirectory(currentPath);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save file');
+      setError(err instanceof Error ? err.message : t('workspace.errorSave'));
     }
-  }, [selectedFile, pendingContent, currentPath, fetchDirectory]);
+  }, [selectedFile, pendingContent, currentPath, fetchDirectory, t]);
 
   const handleReloadFile = useCallback(async () => {
     if (!selectedFile) return;
@@ -322,9 +324,9 @@ function WorkspacePageContent() {
       // Stay in edit mode with fresh content
       setEditingDirty(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reload file');
+      setError(err instanceof Error ? err.message : t('workspace.errorReload'));
     }
-  }, [selectedFile]);
+  }, [selectedFile, t]);
 
   const handleSelectFile = useCallback(
     (entry: FileEntry) => {
@@ -354,8 +356,8 @@ function WorkspacePageContent() {
       <div className="flex items-center gap-3">
         <FolderOpen className="size-6 text-amber-500" />
         <div>
-          <h1 className="text-lg font-semibold">Workspace</h1>
-          <p className="text-sm text-muted-foreground">Browse files in your workspace</p>
+          <h1 className="text-lg font-semibold">{t('workspace.title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('workspace.subtitle')}</p>
         </div>
       </div>
 
@@ -496,7 +498,9 @@ function WorkspacePageContent() {
           showCloseButton={false}
           className="flex h-[85vh] !w-[40vw] !max-w-none flex-col gap-0 p-0 overflow-hidden [&>*]:h-full"
         >
-          <DialogTitle className="sr-only">Edit {selectedFile?.name ?? 'file'}</DialogTitle>
+          <DialogTitle className="sr-only">
+            {t('workspace.editTitle', { name: selectedFile?.name ?? t('workspace.fileFallback') })}
+          </DialogTitle>
           {editing && selectedFile && (
             <FileEditor
               file={selectedFile}

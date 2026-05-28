@@ -61,18 +61,20 @@ enum UserRole {
 }
 
 model User {
-  id             String    @id @default(cuid())
-  email          String    @unique
-  name           String
-  passwordHash   String
-  role           UserRole  @default(viewer)
-  policyId       String
-  isActive       Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  telegramId     String?   @unique
-  whatsappJid    String?   @unique
-  wikiMigratedAt DateTime?
+  id              String    @id @default(cuid())
+  email           String    @unique
+  name            String
+  passwordHash    String
+  role            UserRole  @default(viewer)
+  policyId        String
+  orgName         String?
+  isActive        Boolean   @default(true)
+  isEmailVerified Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  telegramId      String?   @unique
+  whatsappJid     String?   @unique
+  wikiMigratedAt  DateTime?
 
   policy                  Policy            @relation(fields: [policyId], references: [id])
   sessions                Session[]
@@ -86,6 +88,7 @@ model User {
   groupInvitesReceived    GroupInvite[]     @relation("GroupInviteInvitee")
   groupInvitesSent        GroupInvite[]     @relation("GroupInviteInvitedBy")
   wikiSharesAuthored      WikiShare[]       @relation("WikiSharedBy")
+  droplets                Droplet[]
 }
 
 // ============================================================================
@@ -547,6 +550,40 @@ model Notification {
 
   @@index([recipientId])
   @@index([recipientId, isRead])
+}
+
+// ============================================================================
+// DigitalOcean Droplets (subscription-provisioned per user)
+// ============================================================================
+
+enum DropletStatus {
+  creating
+  active
+  off
+  archive
+  deleting
+}
+
+model Droplet {
+  id          String        @id @default(cuid())
+  userId      String
+  doDropletId Int           // numeric ID assigned by DigitalOcean
+  name        String
+  region      String
+  size        String        // DO size slug, e.g. "s-2vcpu-4gb" or "gpu-h100x1-80gb"
+  imageSlug   String        @default("ubuntu-24-04-x64")
+  ipv4           String?
+  ipv6           String?
+  status         DropletStatus @default(creating)
+  servicePackage String?
+  serviceField   String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([doDropletId])
 }
 
 // ============================================================================

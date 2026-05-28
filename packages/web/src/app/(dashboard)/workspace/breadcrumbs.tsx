@@ -2,6 +2,7 @@
 
 import { Fragment } from 'react';
 import { Home } from 'lucide-react';
+import { useLanguage } from '@/i18n';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -26,6 +27,7 @@ function buildSegments(currentPath: string): readonly { name: string; path: stri
 }
 
 export function WorkspaceBreadcrumbs({ currentPath, onNavigate }: WorkspaceBreadcrumbsProps) {
+  const { t } = useLanguage();
   const segments = buildSegments(currentPath);
 
   return (
@@ -35,7 +37,7 @@ export function WorkspaceBreadcrumbs({ currentPath, onNavigate }: WorkspaceBread
           {segments.length === 0 ? (
             <BreadcrumbPage className="flex items-center gap-1.5">
               <Home className="size-3.5" />
-              Workspace
+              {t('workspace.title')}
             </BreadcrumbPage>
           ) : (
             <BreadcrumbLink
@@ -45,7 +47,7 @@ export function WorkspaceBreadcrumbs({ currentPath, onNavigate }: WorkspaceBread
               }}
             >
               <Home className="size-3.5" />
-              Workspace
+              {t('workspace.title')}
             </BreadcrumbLink>
           )}
         </BreadcrumbItem>

@@ -1,0 +1,51 @@
+---
+title: "Hello World: Introducing Clawix"
+description: "Announcing Clawix, the self-hosted multi-agent AI orchestration platform. Learn why we built it and what problems it solves."
+publishedAt: "2024-01-15"
+author:
+  name: "Clawix Team"
+tags:
+  - announcement
+  - open-source
+  - ai-agents
+image: "/og/blog-hello-world.png"
+---
+
+Today we're announcing Clawix, an open-source platform for running AI agents in production.
+
+## The Problem
+
+Most AI tools work great in demos but fail in real environments. They lack:
+
+- **Control** — No visibility into what agents are doing
+- **Reliability** — Unpredictable outputs and failures
+- **Security** — Shared state and insufficient isolation
+
+## Our Solution
+
+Clawix provides infrastructure-grade agent orchestration:
+
+1. **Container Isolation** — Every agent runs in its own container
+2. **Structured Orchestration** — Multi-agent workflows with clear handoffs
+3. **Full Governance** — RBAC, audit logs, and compliance features
+
+## Getting Started
+
+Install Clawix with Docker:
+
+```bash
+docker pull clawix/clawix:latest
+docker run -d -p 8080:8080 clawix/clawix
+```
+
+Then visit `http://localhost:8080` to access the dashboard.
+
+## What's Next
+
+We're working on:
+
+- Additional LLM provider support
+- Slack and WhatsApp integrations
+- Enhanced memory systems
+
+Follow our progress on [GitHub](https://github.com/ClawixAI/clawix).

@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --color-brand: #3b82f6;
+  --color-brand-dark: #2563eb;
+  --color-accent: #06b6d4;
+  --color-accent-dark: #0891b2;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+
+  --color-bg: #0a0a0a;
+  --color-surface: #171717;
+  --color-border: #262626;
+  --color-text: #fafafa;
+  --color-text-secondary: #a3a3a3;
+  --color-text-muted: #737373;
+
+  --color-code-bg: #1e1e1e;
+  --color-code-text: #d4d4d4;
+  --color-code-highlight: #264f78;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html.light {
+  --color-brand: #2563eb;
+  --color-accent: #0891b2;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+  --color-border: #e5e5e5;
+  --color-text: #0a0a0a;
+  --color-text-secondary: #525252;
+  --color-text-muted: #737373;
+
+  --color-code-bg: #f4f4f5;
+  --color-code-text: #3f3f46;
+  --color-code-highlight: #dbeafe;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: var(--color-brand);
+  color: white;
+}
+
+.logo-themed {
+  filter: brightness(1.8) drop-shadow(0 0 8px rgba(59, 130, 246, 0.3));
+  transition: filter 200ms ease;
+}
+
+html.light .logo-themed {
+  filter: none;
+}
+
+@keyframes carousel {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes carousel-reverse {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

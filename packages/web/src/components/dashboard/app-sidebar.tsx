@@ -29,6 +29,7 @@ import {
 import { useTheme } from 'next-themes';
 import anime from 'animejs';
 import { EASING } from '@/lib/anime';
+import { useLanguage } from '@/i18n';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
@@ -57,64 +58,40 @@ import {
 import { useUnreadChat } from '@/components/dashboard/unread-chat-provider';
 
 const platformItems = [
-  {
-    title: 'Conversations',
-    icon: MessageSquare,
-    href: '/conversations',
-  },
-  {
-    title: 'Explore',
-    icon: Compass,
-    href: '/explore',
-  },
-  {
-    title: 'Workspace',
-    icon: FolderOpen,
-    href: '/workspace',
-  },
-  {
-    title: 'Projector',
-    icon: MonitorPlay,
-    href: '/projector',
-  },
-  {
-    title: 'Skills',
-    icon: Wrench,
-    href: '/skills',
-  },
-  {
-    title: 'Agents',
-    icon: Bot,
-    href: '/agents',
-  },
-  {
-    title: 'Schedules',
-    icon: CalendarClock,
-    href: '/tasks',
-  },
-];
+  { titleKey: 'nav.conversations', icon: MessageSquare, href: '/conversations' },
+  { titleKey: 'nav.explore', icon: Compass, href: '/explore' },
+  { titleKey: 'nav.workspace', icon: FolderOpen, href: '/workspace' },
+  { titleKey: 'nav.projector', icon: MonitorPlay, href: '/projector' },
+  { titleKey: 'nav.skills', icon: Wrench, href: '/skills' },
+  { titleKey: 'nav.agents', icon: Bot, href: '/agents' },
+  // Wiki feature's "Schedules" nav item — no translation key yet, so the
+  // label stays English (the t() resolver falls back to the raw key string,
+  // which would render "nav.schedules" verbatim — hence the literal title).
+  { title: 'Schedules', icon: CalendarClock, href: '/tasks' },
+] as const;
 
 interface NavItem {
-  readonly title: string;
+  readonly titleKey: string;
   readonly href: string;
   readonly icon: typeof BookOpen;
   readonly adminOnly?: boolean;
 }
 
 const communityItems: readonly NavItem[] = [
-  { title: 'Groups', href: '/governance/groups', icon: Users },
+  { titleKey: 'nav.groups', href: '/governance/groups', icon: Users },
 ];
 
 const governanceItems: readonly NavItem[] = [
-  { title: 'Dashboard', href: '/dashboard', icon: BookOpen },
-  { title: 'Token Usage', href: '/governance/tokens', icon: Coins },
-  { title: 'Audit Logs', href: '/governance/audit', icon: ScrollText },
+  { titleKey: 'nav.dashboard', href: '/dashboard', icon: BookOpen },
+  { titleKey: 'nav.tokenUsage', href: '/governance/tokens', icon: Coins },
+  { titleKey: 'nav.auditLogs', href: '/governance/audit', icon: ScrollText },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const { resolvedTheme, setTheme } = useTheme();
   const { count: unreadChat } = useUnreadChat();
   const [mounted, setMounted] = useState(false);
@@ -178,7 +155,7 @@ export function AppSidebar() {
                 <div className="grid flex-1 text-left leading-tight">
                   <span className="truncate text-sm font-semibold tracking-tight">Clawix</span>
                   <span className="truncate font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                    enterprise ai
+                    {t('nav.enterpriseAi')}
                   </span>
                 </div>
               </Link>
@@ -190,22 +167,25 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
-            Workspace
+            {t('nav.groupWorkspace')}
           </SidebarGroupLabel>
           <SidebarMenu>
             {platformItems.map((item) => {
-              const showUnreadDot = item.title === 'Conversations' && unreadChat > 0;
+              // Items with a translation key are localized; the Wiki feature's
+              // Schedules item has only a plain English title (no key yet).
+              const label = 'titleKey' in item ? t(item.titleKey) : item.title;
+              const showUnreadDot = item.href === '/conversations' && unreadChat > 0;
               return (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
                     isActive={isActive(item.href)}
-                    tooltip={showUnreadDot ? `${item.title} (${unreadChat} unread)` : item.title}
+                    tooltip={showUnreadDot ? `${label} (${unreadChat} unread)` : label}
                     className={navButtonClass}
                   >
                     <Link href={item.href} className="relative">
                       <item.icon />
-                      <span>{item.title}</span>
+                      <span>{label}</span>
                       {showUnreadDot && (
                         <span
                           aria-label={`${unreadChat} unread chat message${unreadChat === 1 ? '' : 's'}`}
@@ -222,20 +202,20 @@ export function AppSidebar() {
 
         <SidebarGroup>
           <SidebarGroupLabel className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
-            Community
+            {t('nav.groupCommunity')}
           </SidebarGroupLabel>
           <SidebarMenu>
             {communityItems.map((item) => (
-              <SidebarMenuItem key={item.title}>
+              <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild
                   isActive={isActive(item.href)}
-                  tooltip={item.title}
+                  tooltip={t(item.titleKey)}
                   className={navButtonClass}
                 >
                   <Link href={item.href}>
                     <item.icon />
-                    <span>{item.title}</span>
+                    <span>{t(item.titleKey)}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -258,22 +238,22 @@ export function AppSidebar() {
 
         <SidebarGroup>
           <SidebarGroupLabel className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
-            Governance
+            {t('nav.groupGovernance')}
           </SidebarGroupLabel>
           <SidebarMenu>
             {governanceItems
               .filter((item) => !item.adminOnly || user?.role === 'admin')
               .map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
                     isActive={isActive(item.href)}
-                    tooltip={item.title}
+                    tooltip={t(item.titleKey)}
                     className={navButtonClass}
                   >
                     <Link href={item.href}>
                       <item.icon />
-                      <span>{item.title}</span>
+                      <span>{t(item.titleKey)}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -297,23 +277,23 @@ export function AppSidebar() {
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton
                       isActive={pathname.startsWith('/settings')}
-                      tooltip="Settings"
+                      tooltip={t('nav.settings')}
                       className={navButtonClass}
                     >
                       <Settings2 />
-                      <span>Settings</span>
+                      <span>{t('nav.settings')}</span>
                       <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarMenuSub>
                       {[
-                        { title: 'Users', href: '/settings/users', icon: Users },
-                        { title: 'Policies', href: '/settings/policies', icon: CreditCard },
-                        { title: 'Channels', href: '/settings/channels', icon: Radio },
-                        { title: 'Providers', href: '/settings/providers', icon: Bot },
+                        { titleKey: 'nav.users', href: '/settings/users', icon: Users },
+                        { titleKey: 'nav.policies', href: '/settings/policies', icon: CreditCard },
+                        { titleKey: 'nav.channels', href: '/settings/channels', icon: Radio },
+                        { titleKey: 'nav.providers', href: '/settings/providers', icon: Bot },
                       ].map((item) => (
-                        <SidebarMenuSubItem key={item.title}>
+                        <SidebarMenuSubItem key={item.href}>
                           <SidebarMenuSubButton
                             asChild
                             isActive={isActive(item.href)}
@@ -321,7 +301,7 @@ export function AppSidebar() {
                           >
                             <Link href={item.href}>
                               <item.icon />
-                              <span>{item.title}</span>
+                              <span>{t(item.titleKey)}</span>
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
@@ -339,15 +319,15 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-              tooltip={isDark ? 'Light mode' : 'Dark mode'}
+              aria-label={isDark ? t('nav.switchToLight') : t('nav.switchToDark')}
+              tooltip={isDark ? t('nav.lightMode') : t('nav.darkMode')}
               onClick={() => {
                 setTheme(isDark ? 'light' : 'dark');
               }}
             >
               <Sun className="size-4 rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute size-4 rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100" />
-              <span>{mounted ? (isDark ? 'Light mode' : 'Dark mode') : 'Toggle theme'}</span>
+              <span>{mounted ? (isDark ? t('nav.lightMode') : t('nav.darkMode')) : t('nav.toggleTheme')}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
@@ -381,7 +361,7 @@ export function AppSidebar() {
                   }}
                 >
                   <User className="mr-2 size-4" />
-                  Profile
+                  {t('nav.profile')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -392,7 +372,7 @@ export function AppSidebar() {
                   }}
                 >
                   <LogOut className="mr-2 size-4" />
-                  Log out
+                  {t('nav.logout')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

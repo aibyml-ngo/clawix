@@ -25,6 +25,7 @@ import { DataPagination, type PaginationMeta } from '@/components/ui/data-pagina
 import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { DeleteTaskDialog, TaskFormDialog } from './tasks-dialogs';
 import type { ApiSchedule, ApiTask } from './tasks-types';
+import { useLanguage } from '@/i18n';
 
 interface PaginatedTasks {
   readonly data: readonly ApiTask[];
@@ -59,6 +60,7 @@ function lastRunDotClass(status: string): string {
 }
 
 export default function TasksPage() {
+  const { t } = useLanguage();
   const { page, limit, setPage, setLimit } = usePaginationParams();
   const [tasks, setTasks] = useState<readonly ApiTask[]>([]);
   const [meta, setMeta] = useState<PaginationMeta>({
@@ -126,7 +128,7 @@ export default function TasksPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Schedules</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('tasks.title')}</h1>
           <p className="text-sm text-muted-foreground">
             Manage recurring agent runs. Each schedule runs an agent on a cron, interval, or daily
             cadence.
@@ -134,7 +136,7 @@ export default function TasksPage() {
         </div>
         <Button onClick={openNew}>
           <Plus className="mr-2 size-4" />
-          New schedule
+          {t('tasks.newTask')}
         </Button>
       </div>
 
@@ -142,11 +144,11 @@ export default function TasksPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Schedule</TableHead>
-              <TableHead>Last Run</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Next Run</TableHead>
+              <TableHead>{t('tasks.colName')}</TableHead>
+              <TableHead>{t('tasks.colSchedule')}</TableHead>
+              <TableHead>{t('tasks.colLastRun')}</TableHead>
+              <TableHead>{t('tasks.colStatus')}</TableHead>
+              <TableHead>{t('tasks.colNextRun')}</TableHead>
               <TableHead className="w-[50px]" />
             </TableRow>
           </TableHeader>
@@ -221,14 +223,14 @@ export default function TasksPage() {
                             openEdit(task);
                           }}
                         >
-                          Edit
+                          {t('tasks.edit')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onSelect={() => {
                             void handleToggleEnabled(task);
                           }}
                         >
-                          {task.enabled ? 'Disable' : 'Enable'}
+                          {task.enabled ? t('tasks.disable') : t('tasks.enable')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
@@ -236,7 +238,7 @@ export default function TasksPage() {
                             setDeleting(task);
                           }}
                         >
-                          Delete
+                          {t('tasks.delete')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
