@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { authFetch } from '@/lib/auth';
+import { useLanguage } from '@/i18n';
 import type { SkillReadResult } from '@clawix/shared';
 import { BuiltinCard, CustomCard, type Skill, dirNameFromPath } from './skills-cards';
 import {
@@ -17,6 +18,7 @@ import {
 } from './skills-dialogs';
 
 export default function SkillsPage() {
+  const { t } = useLanguage();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,11 +41,11 @@ export default function SkillsPage() {
       setSkills(Array.isArray(res.data) ? res.data : []);
       setError('');
     } catch {
-      setError('Failed to load skills');
+      setError(t('skills.loadError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void fetchSkills();
@@ -60,7 +62,7 @@ export default function SkillsPage() {
       );
       setEditTarget({ dirName, content: res.data.content });
     } catch {
-      setError('Failed to load skill content');
+      setError(t('skills.loadContentError'));
     }
   };
 
@@ -77,7 +79,7 @@ export default function SkillsPage() {
         content: res.data.content,
       });
     } catch {
-      setError('Failed to load skill content');
+      setError(t('skills.loadContentError'));
     }
   };
 
@@ -93,18 +95,17 @@ export default function SkillsPage() {
     <div className="flex flex-col gap-8">
       <div className="border-b border-border/60 pb-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Skills</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('skills.title')}</h1>
           <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground/70">
-            agent toolkit
+            {t('skills.eyebrow')}
           </span>
         </div>
         <p className="text-sm text-muted-foreground">
-          Skills extend your agent&apos;s capabilities with specialized knowledge and workflows.
-          Custom skills live inside your workspace under{' '}
+          {t('skills.intro1')}{' '}
           <code className="rounded bg-foreground/5 px-1 font-mono text-xs">
             /skills/&lt;name&gt;
           </code>
-          .
+          {t('skills.intro2')}
         </p>
       </div>
 
@@ -118,13 +119,13 @@ export default function SkillsPage() {
       <section className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
           <Package className="size-4 text-muted-foreground" />
-          <h2 className="text-lg font-semibold">Built-in Skills</h2>
+          <h2 className="text-lg font-semibold">{t('skills.builtin')}</h2>
           <Badge variant="secondary" className="text-xs">
             {builtinSkills.length}
           </Badge>
         </div>
         {builtinSkills.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No built-in skills found.</p>
+          <p className="text-sm text-muted-foreground">{t('skills.noBuiltin')}</p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {builtinSkills.map((skill) => (
@@ -143,14 +144,14 @@ export default function SkillsPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <User className="size-4 text-muted-foreground" />
-            <h2 className="text-lg font-semibold">Your Skills</h2>
+            <h2 className="text-lg font-semibold">{t('skills.yourSkills')}</h2>
             <Badge variant="secondary" className="text-xs">
               {customSkills.length}
             </Badge>
           </div>
           <Button size="sm" onClick={() => setCreateOpen(true)}>
             <Plus className="mr-1 size-4" />
-            Create skill
+            {t('skills.createSkill')}
           </Button>
         </div>
 
@@ -158,9 +159,7 @@ export default function SkillsPage() {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-8 text-center">
               <Wrench className="mb-2 size-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                No custom skills yet. Click &quot;Create skill&quot; to add one.
-              </p>
+              <p className="text-sm text-muted-foreground">{t('skills.noCustom')}</p>
             </CardContent>
           </Card>
         ) : (

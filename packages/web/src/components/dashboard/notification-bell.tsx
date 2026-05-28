@@ -9,11 +9,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { toast } from 'sonner';
 import { groupsApi } from '@/lib/api/groups';
 import { notificationsApi, type Notification } from '@/lib/api/notifications';
+import { useLanguage } from '@/i18n';
 import { useNotificationsStream } from './use-notifications-stream';
 
 const POLL_INTERVAL_MS = 30_000;
 
 export function NotificationBell() {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
@@ -47,19 +49,21 @@ export function NotificationBell() {
       setUnread((u) => u + 1);
 
       if (n.type === 'PRIMARY_AGENT_ASSIGNED') {
-        const name = n.payload.agentName ?? 'a new primary agent';
-        toast.success('Primary agent updated', {
-          description: `An admin has switched your primary agent to ${name}.`,
+        const name = n.payload.agentName ?? t('bell.aNewPrimaryAgent');
+        toast.success(t('bell.primaryAgentUpdated'), {
+          description: t('bell.primaryAgentDesc', { name }),
           duration: 8000,
         });
         return;
       }
 
       if (n.type === 'GROUP_INVITE_RESPONSE') {
-        const who = n.payload.responderName ?? n.payload.responderEmail ?? 'A member';
-        const groupName = n.payload.groupName ?? 'your group';
+        const who = n.payload.responderName ?? n.payload.responderEmail ?? t('bell.aMember');
+        const groupName = n.payload.groupName ?? t('bell.yourGroup');
         const accepted = n.payload.response === 'accepted';
-        const message = `${who} ${accepted ? 'accepted' : 'rejected'} your invite to ${groupName}`;
+        const message = accepted
+          ? t('bell.inviteAcceptedMsg', { who, group: groupName })
+          : t('bell.inviteRejectedMsg', { who, group: groupName });
         if (accepted) toast.success(message);
         else toast(message);
         // Surfaces (Sent invites tab) listen for this so they can reload.
@@ -70,24 +74,24 @@ export function NotificationBell() {
       }
 
       if (n.type === 'GROUP_INVITE' && n.payload.inviteId) {
-        const groupName = n.payload.groupName ?? 'a group';
+        const groupName = n.payload.groupName ?? t('bell.aGroup');
         const inviteId = n.payload.inviteId;
-        toast.message(`New invite to ${groupName}`, {
-          description: 'Choose Accept or Reject from the bell — or right here.',
+        toast.message(t('bell.newInviteTitle', { group: groupName }), {
+          description: t('bell.newInviteDesc'),
           duration: 10_000,
           action: {
-            label: 'Accept',
+            label: t('bell.accept'),
             onClick: () => {
               void groupsApi.acceptInvite(inviteId).then(async () => {
                 await notificationsApi.markRead(n.id);
                 setItems((prev) => prev.filter((x) => x.id !== n.id));
-                toast.success(`Joined ${groupName}`);
+                toast.success(t('bell.joined', { group: groupName }));
                 await refresh();
               });
             },
           },
           cancel: {
-            label: 'Reject',
+            label: t('bell.reject'),
             onClick: () => {
               void groupsApi.rejectInvite(inviteId).then(async () => {
                 await notificationsApi.markRead(n.id);
@@ -98,7 +102,7 @@ export function NotificationBell() {
           },
         });
       } else {
-        toast.message('New notification', {
+        toast.message(t('bell.newNotification'), {
           description: n.type,
         });
       }
@@ -110,15 +114,15 @@ export function NotificationBell() {
   const handleAccept = async (n: Notification) => {
     if (!n.payload.inviteId) return;
     setBusyId(n.id);
-    const groupName = n.payload.groupName ?? 'the group';
+    const groupName = n.payload.groupName ?? t('bell.theGroup');
     try {
       await groupsApi.acceptInvite(n.payload.inviteId);
       await notificationsApi.markRead(n.id);
       dismiss(n.id);
-      toast.success(`Joined ${groupName}`);
+      toast.success(t('bell.joined', { group: groupName }));
       await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to accept invite');
+      toast.error(e instanceof Error ? e.message : t('bell.failedAccept'));
     } finally {
       setBusyId(null);
     }
@@ -127,15 +131,15 @@ export function NotificationBell() {
   const handleReject = async (n: Notification) => {
     if (!n.payload.inviteId) return;
     setBusyId(n.id);
-    const groupName = n.payload.groupName ?? 'the group';
+    const groupName = n.payload.groupName ?? t('bell.theGroup');
     try {
       await groupsApi.rejectInvite(n.payload.inviteId);
       await notificationsApi.markRead(n.id);
       dismiss(n.id);
-      toast(`Declined invite to ${groupName}`);
+      toast(t('bell.declinedInvite', { group: groupName }));
       await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to reject invite');
+      toast.error(e instanceof Error ? e.message : t('bell.failedReject'));
     } finally {
       setBusyId(null);
     }
@@ -164,7 +168,7 @@ export function NotificationBell() {
               {unread > 99 ? '99+' : unread}
             </Badge>
           ) : null}
-          <span className="sr-only">Notifications</span>
+          <span className="sr-only">{t('bell.notifications')}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -175,7 +179,7 @@ export function NotificationBell() {
         className="w-96 p-0"
       >
         <div className="flex items-center justify-between border-b px-3 py-2">
-          <span className="text-sm font-medium">Notifications</span>
+          <span className="text-sm font-medium">{t('bell.notifications')}</span>
           <Button
             variant="ghost"
             size="sm"
@@ -187,14 +191,14 @@ export function NotificationBell() {
             ) : (
               <CheckCheck className="h-3 w-3" />
             )}
-            <span className="ml-1 text-xs">Mark all read</span>
+            <span className="ml-1 text-xs">{t('bell.markAllRead')}</span>
           </Button>
         </div>
 
         <div className="max-h-96 overflow-y-auto">
           {items.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-              You're all caught up.
+              {t('bell.allCaughtUp')}
             </div>
           ) : (
             items.map((n) => (
@@ -224,28 +228,26 @@ function NotificationRow({
   onAccept: () => void;
   onReject: () => void;
 }) {
+  const { t } = useLanguage();
   if (notification.type === 'GROUP_INVITE') {
-    const groupName = notification.payload.groupName ?? 'a group';
+    const groupName = notification.payload.groupName ?? t('bell.aGroup');
     return (
       <div
         className={`flex flex-col gap-2 border-b px-3 py-3 text-sm last:border-b-0 ${
           notification.isRead ? 'opacity-60' : ''
         }`}
       >
-        <div>
-          <span className="font-medium">Invite</span> to{' '}
-          <span className="font-medium">{groupName}</span>
-        </div>
+        <div className="font-medium">{t('bell.inviteTo', { group: groupName })}</div>
         <div className="text-xs text-muted-foreground">
           {new Date(notification.createdAt).toLocaleString()}
         </div>
         <div className="flex gap-2">
           <Button size="sm" onClick={onAccept} disabled={busy}>
             <Check className="mr-1 h-3 w-3" />
-            Accept
+            {t('bell.accept')}
           </Button>
           <Button size="sm" variant="ghost" onClick={onReject} disabled={busy}>
-            Reject
+            {t('bell.reject')}
           </Button>
         </div>
       </div>
@@ -254,8 +256,8 @@ function NotificationRow({
 
   if (notification.type === 'GROUP_INVITE_RESPONSE') {
     const who =
-      notification.payload.responderName ?? notification.payload.responderEmail ?? 'A member';
-    const groupName = notification.payload.groupName ?? 'your group';
+      notification.payload.responderName ?? notification.payload.responderEmail ?? t('bell.aMember');
+    const groupName = notification.payload.groupName ?? t('bell.yourGroup');
     const accepted = notification.payload.response === 'accepted';
     return (
       <div
@@ -266,11 +268,11 @@ function NotificationRow({
         <div className="font-medium">
           {who}{' '}
           <span className={accepted ? 'text-emerald-400' : 'text-muted-foreground'}>
-            {accepted ? 'accepted' : 'rejected'}
+            {accepted ? t('bell.accepted') : t('bell.rejected')}
           </span>{' '}
-          your invite
+          {t('bell.yourInvite')}
         </div>
-        <div className="text-xs text-muted-foreground">to {groupName}</div>
+        <div className="text-xs text-muted-foreground">{t('bell.toGroup', { group: groupName })}</div>
         <div className="mt-1 text-[10px] text-muted-foreground">
           {new Date(notification.createdAt).toLocaleString()}
         </div>
@@ -279,17 +281,15 @@ function NotificationRow({
   }
 
   if (notification.type === 'PRIMARY_AGENT_ASSIGNED') {
-    const name = notification.payload.agentName ?? 'a new primary agent';
+    const name = notification.payload.agentName ?? t('bell.aNewPrimaryAgent');
     return (
       <div
         className={`border-b px-3 py-3 text-sm last:border-b-0 ${
           notification.isRead ? 'opacity-60' : ''
         }`}
       >
-        <div className="font-medium">Primary agent updated</div>
-        <div className="text-xs text-muted-foreground">
-          An admin switched your primary agent to <span className="text-foreground">{name}</span>.
-        </div>
+        <div className="font-medium">{t('bell.primaryAgentUpdated')}</div>
+        <div className="text-xs text-muted-foreground">{t('bell.primaryAgentDesc', { name })}</div>
         <div className="mt-1 text-[10px] text-muted-foreground">
           {new Date(notification.createdAt).toLocaleString()}
         </div>

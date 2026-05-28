@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { MoreHorizontal, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,6 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useLanguage } from '@/i18n';
 
 const tasks = [
   {
@@ -71,18 +74,17 @@ const tasks = [
 ];
 
 export default function TasksPage() {
+  const { t } = useLanguage();
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Scheduled Tasks</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage recurring and one-time scheduled agent tasks.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">{t('tasks.title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('tasks.subtitle')}</p>
         </div>
         <Button>
           <Plus className="mr-2 size-4" />
-          New Task
+          {t('tasks.newTask')}
         </Button>
       </div>
 
@@ -90,12 +92,12 @@ export default function TasksPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Agent</TableHead>
-              <TableHead>Schedule</TableHead>
-              <TableHead>Last Run</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Next Run</TableHead>
+              <TableHead>{t('tasks.colName')}</TableHead>
+              <TableHead>{t('tasks.colAgent')}</TableHead>
+              <TableHead>{t('tasks.colSchedule')}</TableHead>
+              <TableHead>{t('tasks.colLastRun')}</TableHead>
+              <TableHead>{t('tasks.colStatus')}</TableHead>
+              <TableHead>{t('tasks.colNextRun')}</TableHead>
               <TableHead className="w-[50px]" />
             </TableRow>
           </TableHeader>
@@ -114,7 +116,7 @@ export default function TasksPage() {
                 <TableCell className="text-muted-foreground tabular-nums">{task.lastRun}</TableCell>
                 <TableCell>
                   <Badge variant={task.status === 'success' ? 'secondary' : 'destructive'}>
-                    {task.status}
+                    {task.status === 'success' ? t('tasks.statusSuccess') : t('tasks.statusFailed')}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground tabular-nums">
@@ -128,10 +130,10 @@ export default function TasksPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Edit</DropdownMenuItem>
-                      <DropdownMenuItem>Run Now</DropdownMenuItem>
-                      <DropdownMenuItem>{task.enabled ? 'Disable' : 'Enable'}</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                      <DropdownMenuItem>{t('tasks.edit')}</DropdownMenuItem>
+                      <DropdownMenuItem>{t('tasks.runNow')}</DropdownMenuItem>
+                      <DropdownMenuItem>{task.enabled ? t('tasks.disable') : t('tasks.enable')}</DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive">{t('tasks.delete')}</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

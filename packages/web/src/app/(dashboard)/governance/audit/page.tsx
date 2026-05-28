@@ -16,6 +16,7 @@ import {
 import { authFetch } from '@/lib/auth';
 import { useAnimeOnMount, staggerFadeUp, STAGGER } from '@/lib/anime';
 import { useAuth } from '@/components/auth-provider';
+import { useLanguage } from '@/i18n';
 
 interface AuditLogEntry {
   id: string;
@@ -74,6 +75,7 @@ function formatDetails(details: Record<string, unknown>): string {
 }
 
 export default function AuditLogsPage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -160,14 +162,14 @@ export default function AuditLogsPage() {
     <div className="flex flex-col gap-6">
       <div className="border-b border-border/60 pb-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Audit Logs</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('audit.title')}</h1>
           <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground/70">
-            ledger
+            {t('audit.eyebrow')}
           </span>
         </div>
         <p className="text-sm text-muted-foreground">
-          Immutable record of all actions and events in your workspace.
-          {!isAdmin && ' Showing your actions only.'}
+          {t('audit.intro')}
+          {!isAdmin && ` ${t('audit.introOwnOnly')}`}
         </p>
       </div>
 
@@ -176,7 +178,7 @@ export default function AuditLogsPage() {
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search logs..."
+            placeholder={t('audit.searchPlaceholder')}
             className="pl-9"
             value={searchQuery}
             onChange={(e) => {
@@ -192,7 +194,7 @@ export default function AuditLogsPage() {
             setPage(1);
           }}
         >
-          <option value="">All Actions</option>
+          <option value="">{t('audit.allActions')}</option>
           {knownActions.map((a) => (
             <option key={a} value={a}>
               {a}
@@ -207,14 +209,14 @@ export default function AuditLogsPage() {
             setPage(1);
           }}
         >
-          <option value="">All Resources</option>
+          <option value="">{t('audit.allResources')}</option>
           {knownResources.map((r) => (
             <option key={r} value={r}>
               {r}
             </option>
           ))}
         </select>
-        <span className="text-sm text-muted-foreground">{total} total entries</span>
+        <span className="text-sm text-muted-foreground">{t('audit.totalEntries', { n: total })}</span>
       </div>
 
       {/* Logs table */}
@@ -224,18 +226,18 @@ export default function AuditLogsPage() {
         </div>
       ) : filteredLogs.length === 0 ? (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm p-8 text-center text-sm text-muted-foreground">
-          No audit log entries found.
+          {t('audit.noEntries')}
         </div>
       ) : (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[160px]">Timestamp</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Resource</TableHead>
-                <TableHead>Details</TableHead>
+                <TableHead className="w-[160px]">{t('audit.colTimestamp')}</TableHead>
+                <TableHead>{t('audit.colUser')}</TableHead>
+                <TableHead>{t('audit.colAction')}</TableHead>
+                <TableHead>{t('audit.colResource')}</TableHead>
+                <TableHead>{t('audit.colDetails')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody data-animate="audit-rows">
@@ -281,7 +283,7 @@ export default function AuditLogsPage() {
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
+            {t('audit.pageOf', { page, total: totalPages })}
           </span>
           <div className="flex gap-2">
             <Button
@@ -293,7 +295,7 @@ export default function AuditLogsPage() {
               }}
             >
               <ChevronLeft className="mr-1 size-4" />
-              Previous
+              {t('audit.previous')}
             </Button>
             <Button
               variant="outline"
@@ -303,7 +305,7 @@ export default function AuditLogsPage() {
                 setPage((p) => p + 1);
               }}
             >
-              Next
+              {t('audit.next')}
               <ChevronRight className="ml-1 size-4" />
             </Button>
           </div>

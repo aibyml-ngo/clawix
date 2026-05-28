@@ -65,7 +65,7 @@ export function getStoredTokens(): TokenPair | null {
 }
 
 /** Store the access token in memory and mark the session cookie. */
-function rememberAccessToken(accessToken: string): void {
+export function rememberAccessToken(accessToken: string): void {
   accessTokenCache = accessToken;
   setSessionCookie(true);
 }
@@ -106,6 +106,17 @@ export async function login(email: string, password: string): Promise<AuthUser> 
   const tokens = await apiFetch<TokenPair>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
+  });
+  rememberAccessToken(tokens.accessToken);
+  const user = parseJwtPayload(tokens.accessToken);
+  if (!user) throw new Error('Invalid token received');
+  return user;
+}
+
+export async function register(name: string, email: string, password: string): Promise<AuthUser> {
+  const tokens = await apiFetch<TokenPair>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ name, email, password }),
   });
   rememberAccessToken(tokens.accessToken);
   const user = parseJwtPayload(tokens.accessToken);

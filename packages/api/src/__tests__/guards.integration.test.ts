@@ -15,6 +15,7 @@ import { Roles } from '../auth/roles.decorator.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RedisService } from '../cache/redis.service.js';
 import { AppExceptionFilter } from '../filters/app-exception.filter.js';
+import { MailService } from '../mail/mail.service.js';
 import type { JwtPayload } from '../auth/auth.types.js';
 
 const TEST_SECRET = 'test-jwt-secret-for-guards';
@@ -104,6 +105,16 @@ describe('Guards Integration', () => {
       providers: [
         { provide: PrismaService, useValue: mockPrisma },
         { provide: RedisService, useValue: mockRedis },
+        {
+          provide: MailService,
+          useValue: {
+            sendOtp: async () => {},
+            sendTrainingWelcome: async () => {},
+            sendPaymentLink: async () => {},
+            sendDropletActivating: async () => {},
+            sendDropletReady: async () => {},
+          },
+        },
         AuthService,
         JwtStrategy,
         { provide: APP_FILTER, useClass: AppExceptionFilter },

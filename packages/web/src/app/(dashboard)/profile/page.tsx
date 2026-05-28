@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { authFetch } from '@/lib/auth';
+import { useLanguage } from '@/i18n';
 
 interface Profile {
   id: string;
@@ -21,6 +22,7 @@ interface Profile {
 }
 
 export default function ProfilePage() {
+  const { t } = useLanguage();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -57,11 +59,11 @@ export default function ProfilePage() {
       setTelegramConfigured(channelList.some((ch) => ch.type.toLowerCase() === 'telegram'));
       setWhatsappConfigured(channelList.some((ch) => ch.type.toLowerCase() === 'whatsapp'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load profile');
+      setError(err instanceof Error ? err.message : t('profile.loadError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void fetchProfile();
@@ -82,9 +84,9 @@ export default function ProfilePage() {
         }),
       });
       setProfile(data);
-      setSuccess('Profile updated successfully.');
+      setSuccess(t('profile.updateSuccess'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
+      setError(err instanceof Error ? err.message : t('profile.updateError'));
     } finally {
       setSaving(false);
     }
@@ -93,11 +95,11 @@ export default function ProfilePage() {
   async function handleChangePassword(e: React.SyntheticEvent) {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      setError('New passwords do not match.');
+      setError(t('profile.pwMismatch'));
       return;
     }
     if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters.');
+      setError(t('profile.pwTooShort'));
       return;
     }
     setSaving(true);
@@ -108,12 +110,12 @@ export default function ProfilePage() {
         method: 'POST',
         body: JSON.stringify({ currentPassword, newPassword }),
       });
-      setSuccess('Password changed successfully.');
+      setSuccess(t('profile.pwSuccess'));
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to change password');
+      setError(err instanceof Error ? err.message : t('profile.pwError'));
     } finally {
       setSaving(false);
     }
@@ -131,12 +133,12 @@ export default function ProfilePage() {
     <div className="mx-auto flex max-w-2xl flex-col gap-8">
       <div className="border-b border-border/60 pb-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('profile.title')}</h1>
           <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground/70">
-            account
+            {t('profile.account')}
           </span>
         </div>
-        <p className="text-sm text-muted-foreground">Manage your account settings.</p>
+        <p className="text-sm text-muted-foreground">{t('profile.manage')}</p>
       </div>
 
       {error && (
@@ -152,14 +154,14 @@ export default function ProfilePage() {
 
       {/* Account info (read-only) */}
       <div className="rounded-lg border p-6">
-        <h2 className="mb-4 text-lg font-semibold">Account</h2>
+        <h2 className="mb-4 text-lg font-semibold">{t('profile.accountHeading')}</h2>
         <div className="grid gap-3 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Email</span>
+            <span className="text-muted-foreground">{t('profile.email')}</span>
             <span className="font-medium">{profile?.email}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Role</span>
+            <span className="text-muted-foreground">{t('profile.role')}</span>
             <Badge
               variant={
                 profile?.role === 'admin'
@@ -173,13 +175,13 @@ export default function ProfilePage() {
             </Badge>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Status</span>
+            <span className="text-muted-foreground">{t('profile.status')}</span>
             <Badge variant={profile?.isActive ? 'secondary' : 'outline'}>
-              {profile?.isActive ? 'Active' : 'Inactive'}
+              {profile?.isActive ? t('profile.active') : t('profile.inactive')}
             </Badge>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Member since</span>
+            <span className="text-muted-foreground">{t('profile.memberSince')}</span>
             <span className="font-medium">
               {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : '—'}
             </span>
@@ -194,10 +196,10 @@ export default function ProfilePage() {
         }}
         className="rounded-lg border p-6"
       >
-        <h2 className="mb-4 text-lg font-semibold">Edit Profile</h2>
+        <h2 className="mb-4 text-lg font-semibold">{t('profile.editProfile')}</h2>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="profile-name">Display Name</Label>
+            <Label htmlFor="profile-name">{t('profile.displayName')}</Label>
             <Input
               id="profile-name"
               value={name}
@@ -209,25 +211,22 @@ export default function ProfilePage() {
           </div>
           {telegramConfigured && (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="profile-telegram">Telegram ID</Label>
+              <Label htmlFor="profile-telegram">{t('profile.telegramId')}</Label>
               <Input
                 id="profile-telegram"
                 value={telegramId}
                 onChange={(e) => {
                   setTelegramId(e.target.value);
                 }}
-                placeholder="Your numeric Telegram ID"
+                placeholder={t('profile.telegramPlaceholder')}
                 pattern="\d*"
               />
-              <p className="text-xs text-muted-foreground">
-                Used to link your account with the Telegram bot. Message @userinfobot on Telegram to
-                find your numeric ID.
-              </p>
+              <p className="text-xs text-muted-foreground">{t('profile.telegramHint')}</p>
             </div>
           )}
           {whatsappConfigured && (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="profile-whatsapp">WhatsApp JID</Label>
+              <Label htmlFor="profile-whatsapp">{t('profile.whatsappJid')}</Label>
               <Input
                 id="profile-whatsapp"
                 value={whatsappJid}
@@ -238,13 +237,12 @@ export default function ProfilePage() {
                 pattern="\d+@(s\.whatsapp\.net|lid)"
               />
               <p className="text-xs text-muted-foreground">
-                Used to link your account with the WhatsApp bot. Two valid forms:{' '}
+                {t('profile.waHint1')}{' '}
                 <code className="font-mono">&lt;countrycode&gt;&lt;number&gt;@s.whatsapp.net</code>{' '}
-                (legacy phone-based, e.g.{' '}
-                <code className="font-mono">15551234567@s.whatsapp.net</code>) or{' '}
-                <code className="font-mono">&lt;id&gt;@lid</code> for newer privacy-preserving
-                accounts. The simplest way to find yours is to send any text from the test phone to
-                the bot — the API logs will show the exact value to paste here.
+                {t('profile.waHint2')}{' '}
+                <code className="font-mono">15551234567@s.whatsapp.net</code>
+                {t('profile.waHint3')}{' '}
+                <code className="font-mono">&lt;id&gt;@lid</code> {t('profile.waHint4')}
               </p>
             </div>
           )}
@@ -255,7 +253,7 @@ export default function ProfilePage() {
               ) : (
                 <Save className="mr-2 size-4" />
               )}
-              Save Changes
+              {t('profile.saveChanges')}
             </Button>
           </div>
         </div>
@@ -270,11 +268,11 @@ export default function ProfilePage() {
       >
         <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
           <KeyRound className="size-5" />
-          Change Password
+          {t('profile.changePassword')}
         </h2>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="current-password">Current Password</Label>
+            <Label htmlFor="current-password">{t('profile.currentPassword')}</Label>
             <Input
               id="current-password"
               type="password"
@@ -286,7 +284,7 @@ export default function ProfilePage() {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="new-password">New Password</Label>
+            <Label htmlFor="new-password">{t('profile.newPassword')}</Label>
             <Input
               id="new-password"
               type="password"
@@ -299,7 +297,7 @@ export default function ProfilePage() {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="confirm-password">Confirm New Password</Label>
+            <Label htmlFor="confirm-password">{t('profile.confirmNewPassword')}</Label>
             <Input
               id="confirm-password"
               type="password"
@@ -314,7 +312,7 @@ export default function ProfilePage() {
           <div className="flex justify-end">
             <Button type="submit" variant="outline" disabled={saving}>
               {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-              Change Password
+              {t('profile.changePassword')}
             </Button>
           </div>
         </div>

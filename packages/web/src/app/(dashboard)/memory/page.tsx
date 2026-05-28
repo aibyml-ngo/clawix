@@ -7,6 +7,7 @@ import { useAuth } from '@/components/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { extractText, getDomain, memoryApi, type MemoryItem } from '@/lib/api/memory';
+import { useLanguage } from '@/i18n';
 import { KanbanBoard } from './kanban-board';
 import { CardEditor } from './card-editor';
 
@@ -16,6 +17,7 @@ type EditorState =
   | null;
 
 export default function MemoryPage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const role = user?.role ?? 'viewer';
   const canMutate = role === 'admin' || role === 'developer';
@@ -31,9 +33,9 @@ export default function MemoryPage() {
       const { items: fetched } = await memoryApi.list('visible');
       setItems(fetched);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load memory');
+      setError(e instanceof Error ? e.message : t('memory.loadError'));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void refresh();
@@ -61,15 +63,15 @@ export default function MemoryPage() {
     <div className="flex min-w-0 flex-col gap-4 p-6">
       <header className="flex flex-col gap-1 border-b border-border/60 pb-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Memory</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('memory.title')}</h1>
           <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground/70">
-            knowledge base
+            {t('memory.eyebrow')}
           </span>
         </div>
         <p className="text-sm text-muted-foreground">
-          Tagged knowledge your agent can search. Organize by domain; toggle{' '}
-          <code className="rounded bg-foreground/5 px-1 font-mono text-xs">public</code> to share
-          with the org.
+          {t('memory.intro1')}{' '}
+          <code className="rounded bg-foreground/5 px-1 font-mono text-xs">public</code>{' '}
+          {t('memory.intro2')}
         </p>
       </header>
 
@@ -80,7 +82,7 @@ export default function MemoryPage() {
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Filter content or tags…"
+              placeholder={t('memory.filterPlaceholder')}
               className="pl-8"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -89,7 +91,7 @@ export default function MemoryPage() {
           {canMutate && (
             <Button size="sm" onClick={() => setEditor({ mode: 'create' })}>
               <Plus className="mr-1 size-4" />
-              New
+              {t('memory.new')}
             </Button>
           )}
         </div>
@@ -137,11 +139,12 @@ export default function MemoryPage() {
 }
 
 function ScopeLegend() {
+  const { t } = useLanguage();
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <LegendPill stripe="bg-primary" label="Mine" />
-      <LegendPill stripe="bg-sky-500" label="Group" />
-      <LegendPill stripe="bg-amber-500" label="Org" />
+      <LegendPill stripe="bg-primary" label={t('memory.legendMine')} />
+      <LegendPill stripe="bg-sky-500" label={t('memory.legendGroup')} />
+      <LegendPill stripe="bg-amber-500" label={t('memory.legendOrg')} />
     </div>
   );
 }
