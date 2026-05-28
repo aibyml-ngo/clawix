@@ -1023,6 +1023,8 @@ export const zhHant: Dictionary = {
         'AI 示範往往令人印象深刻，但應用到真實環境時卻會失效。它們缺乏控制、可靠性與擴展能力。',
       chaosLabel: '一般 AI 工具',
       structuredLabel: 'Clawix',
+      chaos: ['輸出不可預測', '無法掌握代理的行為', '供應商鎖定', '安全疑慮'],
+      structured: ['可預期的工作流程', '完整稽核軌跡', '多供應商支援', '容器隔離'],
     },
     positioning: {
       title: '不只是另一個 AI 工具 —— 而是讓 AI 真正運作的系統',

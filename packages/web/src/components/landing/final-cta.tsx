@@ -25,7 +25,7 @@ export function FinalCtaSection() {
               size="lg"
               className="bg-white text-clawix-cta hover:bg-white/90"
             >
-              <Link href="/signup">
+              <Link href="/ecommerce">
                 {t('home.finalCta.ctaPrimary')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

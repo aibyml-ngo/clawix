@@ -220,7 +220,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-svh w-full">
+    <div className="brand-clawix flex min-h-svh w-full">
       {/* ── Left panel ──────────────────────────────────────────────────── */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-8 lg:p-10">
         {/* Logo */}

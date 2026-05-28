@@ -134,7 +134,7 @@ function VerifyEmailForm() {
   }
 
   return (
-    <div className="relative flex min-h-svh items-center justify-center bg-background px-4">
+    <div className="brand-clawix relative flex min-h-svh items-center justify-center bg-background px-4">
       <LanguageToggle className="absolute right-4 top-4" />
       <div className="w-full max-w-md">
         {/* Logo */}

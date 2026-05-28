@@ -25,22 +25,12 @@ export function ProblemSection() {
               {t('home.problem.chaosLabel')}
             </div>
             <div className="mt-4 space-y-4">
-              <div className="flex items-start gap-3 text-muted-foreground">
-                <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
-                <span>Unpredictable outputs</span>
-              </div>
-              <div className="flex items-start gap-3 text-muted-foreground">
-                <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
-                <span>No visibility into agent actions</span>
-              </div>
-              <div className="flex items-start gap-3 text-muted-foreground">
-                <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
-                <span>Vendor lock-in</span>
-              </div>
-              <div className="flex items-start gap-3 text-muted-foreground">
-                <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
-                <span>Security concerns</span>
-              </div>
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="flex items-start gap-3 text-muted-foreground">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
+                  <span>{t(`home.problem.chaos.${i}`)}</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -50,22 +40,12 @@ export function ProblemSection() {
               {t('home.problem.structuredLabel')}
             </div>
             <div className="mt-4 space-y-4">
-              <div className="flex items-start gap-3 text-foreground">
-                <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-clawix-success" />
-                <span>Deterministic workflows</span>
-              </div>
-              <div className="flex items-start gap-3 text-foreground">
-                <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-clawix-success" />
-                <span>Full audit trail</span>
-              </div>
-              <div className="flex items-start gap-3 text-foreground">
-                <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-clawix-success" />
-                <span>Multi-provider support</span>
-              </div>
-              <div className="flex items-start gap-3 text-foreground">
-                <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-clawix-success" />
-                <span>Container isolation</span>
-              </div>
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="flex items-start gap-3 text-foreground">
+                  <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-clawix-success" />
+                  <span>{t(`home.problem.structured.${i}`)}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

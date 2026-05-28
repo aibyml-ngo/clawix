@@ -1034,6 +1034,18 @@ export const en = {
         'AI demos often look impressive, but fail when applied to real-world environments. They lack control, reliability, and scalability.',
       chaosLabel: 'Typical AI Tools',
       structuredLabel: 'Clawix',
+      chaos: [
+        'Unpredictable outputs',
+        'No visibility into agent actions',
+        'Vendor lock-in',
+        'Security concerns',
+      ],
+      structured: [
+        'Deterministic workflows',
+        'Full audit trail',
+        'Multi-provider support',
+        'Container isolation',
+      ],
     },
     positioning: {
       title: 'Not Another AI Tool — A System That Makes AI Work',

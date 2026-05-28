@@ -33,7 +33,7 @@ export function HeroSection() {
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <LandingButton asChild size="lg">
-              <Link href="/signup">
+              <Link href="/ecommerce">
                 {t('home.hero.ctaPrimary')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

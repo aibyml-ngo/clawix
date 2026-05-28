@@ -49,7 +49,7 @@ export function Header() {
             <Link href="/login">{t('home.nav.signIn')}</Link>
           </LandingButton>
           <LandingButton asChild size="sm">
-            <Link href="/signup">{t('home.nav.getStarted')}</Link>
+            <Link href="/ecommerce">{t('home.nav.getStarted')}</Link>
           </LandingButton>
         </div>
 
@@ -90,7 +90,7 @@ export function Header() {
               <Link href="/login">{t('home.nav.signIn')}</Link>
             </LandingButton>
             <LandingButton asChild>
-              <Link href="/signup">{t('home.nav.getStarted')}</Link>
+              <Link href="/ecommerce">{t('home.nav.getStarted')}</Link>
             </LandingButton>
           </div>
         </div>

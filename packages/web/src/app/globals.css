@@ -110,6 +110,16 @@
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
 }
 
+/* Scoped blue/teal brand skin for marketing-adjacent pages (landing palette).
+   Locally overrides the shadcn primary/ring tokens so bg-primary, text-primary,
+   primary Buttons, and focus rings adopt the Clawix blue — without touching the
+   dashboard, which keeps its own theme. */
+.brand-clawix {
+  --primary: var(--clawix-cta);
+  --primary-foreground: oklch(1 0 0);
+  --ring: var(--clawix-cta);
+}
+
 @layer base {
   * {
     @apply border-border;

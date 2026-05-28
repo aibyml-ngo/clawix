@@ -75,7 +75,7 @@ function LoginForm() {
   const isDisabled = isLoading || waitTime > 0;
 
   return (
-    <div className="flex min-h-svh w-full">
+    <div className="brand-clawix flex min-h-svh w-full">
       {/* Left panel */}
       <div className="flex flex-1 flex-col gap-4 p-10">
         {/* Logo */}
