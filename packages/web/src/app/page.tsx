@@ -25,9 +25,15 @@ export default function LandingPage() {
         <div id="how-it-works" className="scroll-mt-16">
           <HowItWorksSection />
         </div>
-        <DemoSection />
-        <EnterpriseSection />
-        <GitHubSection />
+        <div id="demo" className="scroll-mt-16">
+          <DemoSection />
+        </div>
+        <div id="enterprise" className="scroll-mt-16">
+          <EnterpriseSection />
+        </div>
+        <div id="github" className="scroll-mt-16">
+          <GitHubSection />
+        </div>
         <div id="faq" className="scroll-mt-16">
           <FaqSection />
         </div>

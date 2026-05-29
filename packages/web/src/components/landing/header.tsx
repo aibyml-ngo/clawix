@@ -2,16 +2,28 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { GalleryVerticalEnd, Menu, X } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, GalleryVerticalEnd, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LanguageToggle } from '@/components/language-toggle';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/i18n';
 
-const navItems = [
-  { href: '#features', key: 'home.nav.features' },
-  { href: '#how-it-works', key: 'home.nav.howItWorks' },
-  { href: '#faq', key: 'home.nav.faq' },
+// TODO: replace with the real Discord invite URL (e.g. https://discord.gg/xxxxxxx)
+const DISCORD_URL = '#';
+
+const menuItems = [
+  { href: '#features', key: 'home.nav.products', external: false },
+  { href: '#demo', key: 'home.nav.useCases', external: false },
+  { href: '#github', key: 'home.nav.developers', external: false },
+  { href: '#enterprise', key: 'home.nav.enterprise', external: false },
+  { href: '#how-it-works', key: 'home.nav.learn', external: false },
+  { href: DISCORD_URL, key: 'home.nav.discord', external: true },
 ] as const;
 
 export function Header() {
@@ -29,17 +41,30 @@ export function Header() {
           <span className="text-base font-semibold">{t('home.brand')}</span>
         </a>
 
-        {/* Desktop nav */}
+        {/* Desktop nav — sections dropdown */}
         <nav className="hidden items-center gap-6 md:flex">
-          {navItems.map((item) => (
-            <a
-              key={item.key}
-              href={item.href}
-              className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
-            >
-              {t(item.key)}
-            </a>
-          ))}
+          <DropdownMenu>
+            <DropdownMenuTrigger className="group inline-flex items-center gap-1 text-sm font-medium text-foreground/80 outline-none transition-colors hover:text-clawix-accent data-[state=open]:text-clawix-accent">
+              {t('home.nav.menu')}
+              <ChevronDown className="size-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-44">
+              {menuItems.map((item) => (
+                <DropdownMenuItem key={item.key} asChild>
+                  <a
+                    href={item.href}
+                    className="cursor-pointer"
+                    {...(item.external
+                      ? { target: '_blank', rel: 'noopener noreferrer' }
+                      : {})}
+                  >
+                    <span className="flex-1">{t(item.key)}</span>
+                    {item.external && <ArrowUpRight className="size-3.5 opacity-60" />}
+                  </a>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
 
         {/* Desktop CTAs */}
@@ -73,16 +98,18 @@ export function Header() {
       {/* Mobile menu */}
       <div className={cn('md:hidden', mobileMenuOpen ? 'block' : 'hidden')}>
         <div className="space-y-1 border-t border-border px-4 pb-4 pt-2">
-          {navItems.map((item) => (
+          {menuItems.map((item) => (
             <a
               key={item.key}
               href={item.href}
-              className="block py-2 text-base text-foreground/80 hover:text-primary"
+              className="flex items-center gap-1 py-2 text-base text-foreground/80 hover:text-clawix-accent"
+              {...(item.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
               onClick={() => {
                 setMobileMenuOpen(false);
               }}
             >
               {t(item.key)}
+              {item.external && <ArrowUpRight className="size-3.5 opacity-60" />}
             </a>
           ))}
           <div className="flex flex-col gap-2 pt-4">

@@ -1003,6 +1003,13 @@ export const zhHant: Dictionary = {
       getStarted: '開始使用',
       openMenu: '開啟選單',
       closeMenu: '關閉選單',
+      menu: '探索',
+      products: '產品',
+      useCases: '應用案例',
+      developers: '開發者',
+      enterprise: '企業',
+      learn: '學習',
+      discord: 'Discord',
     },
     footer: {
       blurb: '自行託管的 AI 代理編排平台。',
