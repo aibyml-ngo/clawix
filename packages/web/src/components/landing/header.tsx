@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { GalleryVerticalEnd, Menu, X } from 'lucide-react';
-import { LandingButton } from './button';
+import { Button } from '@/components/ui/button';
 import { LanguageToggle } from '@/components/language-toggle';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/i18n';
@@ -19,15 +19,15 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand */}
-        <Link href="/" className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-md bg-clawix-cta text-white">
+        <a href="https://clawix.aibyml.com" className="flex items-center gap-2">
+          <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <GalleryVerticalEnd className="size-4" />
           </span>
-          <span className="text-base font-bold text-clawix-primary">{t('home.brand')}</span>
-        </Link>
+          <span className="text-base font-semibold">{t('home.brand')}</span>
+        </a>
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-6 md:flex">
@@ -35,7 +35,7 @@ export function Header() {
             <a
               key={item.key}
               href={item.href}
-              className="text-sm font-medium text-foreground/80 transition-colors hover:text-clawix-accent"
+              className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
             >
               {t(item.key)}
             </a>
@@ -45,12 +45,12 @@ export function Header() {
         {/* Desktop CTAs */}
         <div className="hidden items-center gap-3 md:flex">
           <LanguageToggle />
-          <LandingButton asChild variant="outline" size="sm">
+          <Button asChild variant="ghost">
             <Link href="/login">{t('home.nav.signIn')}</Link>
-          </LandingButton>
-          <LandingButton asChild size="sm">
+          </Button>
+          <Button asChild>
             <Link href="/ecommerce">{t('home.nav.getStarted')}</Link>
-          </LandingButton>
+          </Button>
         </div>
 
         {/* Mobile toggle row */}
@@ -77,7 +77,7 @@ export function Header() {
             <a
               key={item.key}
               href={item.href}
-              className="block py-2 text-base text-foreground/80 hover:text-clawix-accent"
+              className="block py-2 text-base text-foreground/80 hover:text-primary"
               onClick={() => {
                 setMobileMenuOpen(false);
               }}
@@ -86,12 +86,12 @@ export function Header() {
             </a>
           ))}
           <div className="flex flex-col gap-2 pt-4">
-            <LandingButton asChild variant="outline">
+            <Button asChild variant="outline">
               <Link href="/login">{t('home.nav.signIn')}</Link>
-            </LandingButton>
-            <LandingButton asChild>
+            </Button>
+            <Button asChild>
               <Link href="/ecommerce">{t('home.nav.getStarted')}</Link>
-            </LandingButton>
+            </Button>
           </div>
         </div>
       </div>

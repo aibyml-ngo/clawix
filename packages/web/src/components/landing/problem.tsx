@@ -7,7 +7,7 @@ export function ProblemSection() {
   const { t } = useLanguage();
 
   return (
-    <section className="bg-white py-20 sm:py-24">
+    <section className="bg-background py-20 sm:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -35,14 +35,14 @@ export function ProblemSection() {
           </div>
 
           {/* Structured side */}
-          <div className="relative rounded-2xl border-2 border-clawix-success bg-clawix-bg p-8">
-            <div className="absolute -top-4 left-6 rounded-full bg-clawix-success px-4 py-1 text-sm font-medium text-white">
+          <div className="relative rounded-2xl border-2 border-green-500 bg-green-50 p-8">
+            <div className="absolute -top-4 left-6 rounded-full bg-green-500 px-4 py-1 text-sm font-medium text-white">
               {t('home.problem.structuredLabel')}
             </div>
             <div className="mt-4 space-y-4">
               {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="flex items-start gap-3 text-foreground">
-                  <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-clawix-success" />
+                <div key={i} className="flex items-start gap-3 text-gray-900">
+                  <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
                   <span>{t(`home.problem.structured.${i}`)}</span>
                 </div>
               ))}

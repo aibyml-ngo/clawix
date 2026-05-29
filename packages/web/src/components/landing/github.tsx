@@ -1,7 +1,7 @@
 'use client';
 
 import { Star, Scale } from 'lucide-react';
-import { LandingButton } from '@/components/landing/button';
+import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/i18n';
 
 function GithubIcon({ className }: { className?: string }) {
@@ -21,7 +21,7 @@ export function GitHubSection() {
   const { t } = useLanguage();
 
   return (
-    <section className="bg-white py-20 sm:py-24">
+    <section className="bg-background py-20 sm:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -43,7 +43,7 @@ export function GitHubSection() {
           </div>
 
           <div className="mt-10">
-            <LandingButton asChild variant="outline" size="lg">
+            <Button asChild variant="outline" size="lg">
               <a
                 href="https://github.com/ClawixAI/clawix"
                 target="_blank"
@@ -52,7 +52,7 @@ export function GitHubSection() {
                 <GithubIcon className="mr-2 h-5 w-5" />
                 {t('home.github.cta')}
               </a>
-            </LandingButton>
+            </Button>
           </div>
         </div>
       </div>

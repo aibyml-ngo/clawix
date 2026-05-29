@@ -120,6 +120,34 @@
   --ring: var(--clawix-cta);
 }
 
+/* Always-light landing: the marketing page is light-only regardless of the
+   user's theme. We force the full light palette onto the landing container so
+   that, even when `.dark` sits on <html> for the dashboard, this closer
+   ancestor wins for every token across the subtree. (--primary /
+   --primary-foreground / --ring are owned by the sibling `.brand-clawix` on the
+   same element and already resolve correctly, so they're intentionally omitted
+   here.) Body/heading copy is retoned to dark grey instead of near-black; white
+   text on coloured buttons/icons is unaffected. */
+.landing-light {
+  --background: oklch(1 0 0);
+  --card: oklch(1 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  /* Dark-grey copy retoning */
+  --foreground: oklch(0.37 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --card-foreground: oklch(0.37 0 0);
+}
+
 @layer base {
   * {
     @apply border-border;

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { LandingButton } from '@/components/landing/button';
+import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/i18n';
 
 function GithubIcon({ className }: { className?: string }) {
@@ -22,7 +22,7 @@ export function HeroSection() {
   const { t } = useLanguage();
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-clawix-bg to-clawix-accent-secondary/20 py-20 sm:py-32">
+    <section className="bg-background py-20 sm:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
           <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
@@ -32,16 +32,16 @@ export function HeroSection() {
             {t('home.hero.subheadline')}
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <LandingButton asChild size="lg">
+            <Button asChild size="lg">
               <Link href="/ecommerce">
                 {t('home.hero.ctaPrimary')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
-            </LandingButton>
-            <LandingButton asChild variant="outline" size="lg">
+            </Button>
+            <Button asChild variant="outline" size="lg">
               <Link href="#demo">{t('home.hero.ctaSecondary')}</Link>
-            </LandingButton>
-            <LandingButton asChild variant="link" size="lg">
+            </Button>
+            <Button asChild variant="link" size="lg">
               <a
                 href="https://github.com/ClawixAI/clawix"
                 target="_blank"
@@ -50,12 +50,10 @@ export function HeroSection() {
                 <GithubIcon className="mr-2 h-4 w-4" />
                 {t('home.hero.ctaGithub')}
               </a>
-            </LandingButton>
+            </Button>
           </div>
         </div>
       </div>
-      <div className="absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-clawix-accent-secondary/30 blur-3xl" />
-      <div className="absolute -bottom-24 right-0 h-72 w-72 rounded-full bg-clawix-success/20 blur-3xl" />
     </section>
   );
 }

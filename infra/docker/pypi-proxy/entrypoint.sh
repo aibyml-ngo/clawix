@@ -85,10 +85,18 @@ if [ ! -f "$SERVERDIR/.serverversion" ]; then
 fi
 
 # ---- Drop to devpi user and exec devpi-server on loopback only ----
+# --secretfile persists the signing secret in the named volume so login
+# tokens survive restarts (without it devpi generates a new secret each
+# time and all sessions are invalidated on every container restart).
+SECRET_FILE="$SERVERDIR/.secret"
+if [ ! -f "$SECRET_FILE" ]; then
+  gosu devpi sh -c "openssl rand -hex 32 > '$SECRET_FILE' && chmod 600 '$SECRET_FILE'"
+fi
+
 echo "[entrypoint] starting devpi-server on 127.0.0.1:3142"
 exec gosu devpi devpi-server \
   --serverdir "$SERVERDIR" \
   --host 127.0.0.1 \
   --port 3142 \
-  --restrict-modify "" \
+  --secretfile "$SECRET_FILE" \
   "$@"

@@ -29,10 +29,10 @@ export function Footer() {
           {/* Brand */}
           <div className="max-w-sm">
             <Link href="/" className="flex items-center gap-2">
-              <span className="flex size-7 items-center justify-center rounded-md bg-clawix-cta text-white">
+              <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
                 <GalleryVerticalEnd className="size-4" />
               </span>
-              <span className="text-lg font-bold text-clawix-primary">{t('home.brand')}</span>
+              <span className="text-lg font-semibold">{t('home.brand')}</span>
             </Link>
             <p className="mt-3 text-sm text-muted-foreground">{t('home.footer.blurb')}</p>
             <a

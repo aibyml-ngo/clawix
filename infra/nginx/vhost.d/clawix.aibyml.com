@@ -1,5 +1,5 @@
 # Route API and all top-level API paths to the clawix-api container
-location ~ ^/(api|auth|admin|health|notifications|memory|groups|providers)(/.*)?$ {
+location ~ ^/(api|auth|admin|health|notifications|groups|providers)(/.*)?$ {
     resolver 127.0.0.11 valid=30s;
     set $api http://clawix-api:3001;
     proxy_pass $api;

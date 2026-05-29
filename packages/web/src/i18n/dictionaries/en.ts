@@ -1086,6 +1086,7 @@ export const en = {
       title: 'See Clawix in Action',
       description: 'Watch how Clawix orchestrates AI agents in a real workflow.',
       cta: 'Watch Full Demo',
+      caption: 'Demo video in Cantonese Chinese',
     },
     enterprise: {
       title: 'AI You Can Trust at Scale',

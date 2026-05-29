@@ -13,7 +13,7 @@ import { FinalCtaSection } from '@/components/landing/final-cta';
 
 export default function LandingPage() {
   return (
-    <div className="flex min-h-svh flex-col bg-background text-foreground">
+    <div className="brand-clawix landing-light flex min-h-svh flex-col bg-background text-foreground">
       <Header />
       <main className="flex-1">
         <HeroSection />

@@ -1062,6 +1062,7 @@ export const zhHant: Dictionary = {
       title: '實際體驗 Clawix',
       description: '觀看 Clawix 如何在真實工作流程中協調 AI 代理。',
       cta: '觀看完整示範',
+      caption: '示範影片為廣東話粵語',
     },
     enterprise: {
       title: '值得信賴的規模化 AI',

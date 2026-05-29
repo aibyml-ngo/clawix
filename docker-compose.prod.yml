@@ -203,7 +203,7 @@ services:
     # depth still comes from: non-root devpi-server runtime, isolated
     # Docker network, read-only allowlist mount, devpi listening only on
     # 127.0.0.1 (nginx is the only external entry point).
-    mem_limit: 512m
+    mem_limit: 1024m
     cpus: 1.0
     pids_limit: 200
     environment:
@@ -219,9 +219,9 @@ services:
     healthcheck:
       test: ['CMD', 'curl', '-fsSL', 'http://localhost:3141/+api']
       interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+      timeout: 30s
+      retries: 5
+      start_period: 60s
 
 volumes:
   postgres_data:
