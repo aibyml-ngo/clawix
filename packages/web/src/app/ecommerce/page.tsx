@@ -119,7 +119,10 @@ export default function EcommercePage() {
   );
 }
 
-type Accent = { icon: string; glow: string };
+interface Accent {
+  icon: string;
+  glow: string;
+}
 
 const accents = {
   sky: { icon: 'from-sky-500 to-blue-600', glow: 'from-sky-500/15 to-blue-600/10' },

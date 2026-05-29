@@ -82,7 +82,7 @@ function ProviderModelFields({
       .then((res) => setDynamicModels(Array.isArray(res.data) ? res.data : []))
       .catch(() => setDynamicModels(currentProvider?.models ?? []))
       .finally(() => setLoadingModels(false));
-  }, [selectedProvider]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedProvider]);
 
   const models = dynamicModels.length > 0 ? dynamicModels : (currentProvider?.models ?? []);
 

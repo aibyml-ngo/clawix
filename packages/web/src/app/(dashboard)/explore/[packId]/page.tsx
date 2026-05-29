@@ -213,11 +213,11 @@ export default function PackDetailPage() {
             {allSubagents.length > 0 && (
               <div className="flex flex-col gap-2">
                 <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('packDetail.subAgents')}</p>
-                {(allSubagents as Array<PackAgent | PackSubagent>).map((item) =>
+                {(allSubagents as (PackAgent | PackSubagent)[]).map((item) =>
                   'role' in item ? (
-                    <AgentCard key={item.name} agent={item as PackAgent} isSubagent />
+                    <AgentCard key={item.name} agent={item} isSubagent />
                   ) : (
-                    <SubagentCard key={item.name} subagent={item as PackSubagent} />
+                    <SubagentCard key={item.name} subagent={item} />
                   )
                 )}
               </div>
