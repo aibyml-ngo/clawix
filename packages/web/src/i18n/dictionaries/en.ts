@@ -1014,6 +1014,13 @@ export const en = {
       getStarted: 'Get Started',
       openMenu: 'Open menu',
       closeMenu: 'Close menu',
+      menu: 'Explore',
+      products: 'Products',
+      useCases: 'Use Cases',
+      developers: 'Developers',
+      enterprise: 'Enterprise',
+      learn: 'Learn',
+      discord: 'Discord',
     },
     footer: {
       blurb: 'Self-hosted AI agent orchestration platform.',
