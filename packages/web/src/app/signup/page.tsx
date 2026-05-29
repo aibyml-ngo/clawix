@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   Eye, EyeOff, GalleryVerticalEnd, Loader2,
   ChevronDown, ChevronUp, Terminal, Copy, Check,
@@ -225,12 +226,16 @@ export default function SignupPage() {
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-8 lg:p-10">
         {/* Logo */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <Link
+            href="/"
+            className="flex items-center gap-2 transition-opacity hover:opacity-80"
+            aria-label={t('common.brand')}
+          >
             <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <GalleryVerticalEnd className="size-4" />
             </div>
             <span className="text-sm font-medium">{t('common.brand')}</span>
-          </div>
+          </Link>
           <LanguageToggle />
         </div>
 

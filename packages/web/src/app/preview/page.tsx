@@ -57,9 +57,13 @@ export default function PreviewPage() {
       <div className="mx-auto max-w-2xl">
         {/* Header */}
         <div className="mb-10 flex items-center gap-3">
-          <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <Link
+            href="/"
+            className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground transition-opacity hover:opacity-80"
+            aria-label={t('common.brand')}
+          >
             <GalleryVerticalEnd className="size-4" />
-          </div>
+          </Link>
           <div className="flex-1">
             <h1 className="text-xl font-bold">{t('preview.title')}</h1>
             <p className="text-sm text-muted-foreground">{t('preview.subtitle')}</p>

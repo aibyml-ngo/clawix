@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import {
   GalleryVerticalEnd, Loader2, Lock, CreditCard,
   Server, CheckCircle2, ShieldCheck, GraduationCap,
@@ -148,12 +149,16 @@ function PaymentForm() {
       <LanguageToggle className="absolute right-4 top-4" />
       <div className="w-full max-w-3xl">
         {/* Logo */}
-        <div className="mb-8 flex items-center justify-center gap-2">
+        <Link
+          href="/"
+          className="mb-8 flex items-center justify-center gap-2 transition-opacity hover:opacity-80"
+          aria-label={t('common.brand')}
+        >
           <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <GalleryVerticalEnd className="size-4" />
           </div>
           <span className="text-base font-semibold">{t('common.brand')}</span>
-        </div>
+        </Link>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
 

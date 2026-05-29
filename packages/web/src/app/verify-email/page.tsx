@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { GalleryVerticalEnd, Loader2, MailCheck, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LanguageToggle } from '@/components/language-toggle';
@@ -138,12 +139,16 @@ function VerifyEmailForm() {
       <LanguageToggle className="absolute right-4 top-4" />
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="mb-8 flex items-center justify-center gap-2">
+        <Link
+          href="/"
+          className="mb-8 flex items-center justify-center gap-2 transition-opacity hover:opacity-80"
+          aria-label={t('common.brand')}
+        >
           <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <GalleryVerticalEnd className="size-4" />
           </div>
           <span className="text-base font-semibold">{t('common.brand')}</span>
-        </div>
+        </Link>
 
         <div className="rounded-2xl border bg-card p-8 shadow-sm">
           {/* Icon + heading */}

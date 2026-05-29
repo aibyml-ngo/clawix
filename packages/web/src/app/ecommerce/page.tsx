@@ -13,12 +13,16 @@ export default function EcommercePage() {
     <div className="brand-clawix flex min-h-svh flex-col bg-background text-foreground">
       {/* Nav */}
       <header className="flex items-center justify-between border-b px-8 py-4">
-        <div className="flex items-center gap-2">
+        <Link
+          href="/"
+          className="flex items-center gap-2 transition-opacity hover:opacity-80"
+          aria-label={t('common.brand')}
+        >
           <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <GalleryVerticalEnd className="size-4" />
           </div>
           <span className="text-base font-semibold">{t('common.brand')}</span>
-        </div>
+        </Link>
         <nav className="flex items-center gap-2">
           <LanguageToggle />
           <Button variant="ghost" asChild>
