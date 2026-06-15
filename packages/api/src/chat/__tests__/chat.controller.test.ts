@@ -6,6 +6,7 @@ describe('ChatController', () => {
   const mockSessionRepo = {
     findByUserId: vi.fn(),
     findById: vi.fn(),
+    delete: vi.fn(),
   };
   const mockPrisma = {
     sessionMessage: {
@@ -139,11 +140,28 @@ describe('ChatController', () => {
         meta: { total: 2, page: 1, limit: 50 },
       });
       expect(mockPrisma.sessionMessage.findMany).toHaveBeenCalledWith({
-        where: { sessionId: 'sess-1', archivedAt: null },
+        where: { sessionId: 'sess-1', archivedAt: null, hiddenInHistory: false },
         orderBy: { ordering: 'desc' },
         skip: 0,
         take: 50,
       });
+    });
+
+    it('excludes hiddenInHistory rows from both the page query and the total count', async () => {
+      mockSessionRepo.findById.mockResolvedValue({ id: 'sess-1', userId: 'user-1' });
+      mockPrisma.sessionMessage.findMany.mockResolvedValue([]);
+      mockPrisma.sessionMessage.count.mockResolvedValue(0);
+
+      const controller = createController();
+      const req = { user: { sub: 'user-1' } };
+      await controller.listMessages(req as never, 'sess-1', { page: 1, limit: 50 });
+
+      const expectedWhere = { sessionId: 'sess-1', archivedAt: null, hiddenInHistory: false };
+      expect(mockPrisma.sessionMessage.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expectedWhere }),
+      );
+      // Count must apply the same filter or pagination math drifts.
+      expect(mockPrisma.sessionMessage.count).toHaveBeenCalledWith({ where: expectedWhere });
     });
 
     it('throws NotFoundException when session belongs to another user', async () => {
@@ -167,11 +185,37 @@ describe('ChatController', () => {
       await controller.listMessages(req as never, 'sess-1', {});
 
       expect(mockPrisma.sessionMessage.findMany).toHaveBeenCalledWith({
-        where: { sessionId: 'sess-1', archivedAt: null },
+        where: { sessionId: 'sess-1', archivedAt: null, hiddenInHistory: false },
         orderBy: { ordering: 'desc' },
         skip: 0,
         take: 50,
       });
+    });
+  });
+
+  describe('DELETE /api/v1/chat/sessions/:id', () => {
+    it('deletes a session owned by the caller', async () => {
+      mockSessionRepo.findById.mockResolvedValue({ id: 'sess-1', userId: 'user-1' });
+      mockSessionRepo.delete.mockResolvedValue({ id: 'sess-1' });
+
+      const controller = createController();
+      const req = { user: { sub: 'user-1' } };
+      const result = await controller.deleteSession(req as never, 'sess-1');
+
+      expect(result).toEqual({ success: true });
+      expect(mockSessionRepo.delete).toHaveBeenCalledWith('sess-1');
+    });
+
+    it('throws NotFoundException when session belongs to another user', async () => {
+      mockSessionRepo.findById.mockResolvedValue({ id: 'sess-1', userId: 'other-user' });
+
+      const controller = createController();
+      const req = { user: { sub: 'user-1' } };
+
+      await expect(controller.deleteSession(req as never, 'sess-1')).rejects.toThrow(
+        'Session not found',
+      );
+      expect(mockSessionRepo.delete).not.toHaveBeenCalled();
     });
   });
 });

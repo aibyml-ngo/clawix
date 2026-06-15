@@ -56,8 +56,6 @@ async function main(): Promise<void> {
   // Delete in reverse dependency order; ON DELETE CASCADE handles children.
   console.log('  Cleaning previous seed data...');
   await prisma.auditLog.deleteMany({});
-  await prisma.memoryShare.deleteMany({});
-  await prisma.memoryItem.deleteMany({});
   await prisma.group.deleteMany({});
   await prisma.session.deleteMany({});
   await prisma.userAgent.deleteMany({});
@@ -96,6 +94,12 @@ async function main(): Promise<void> {
       envKey: 'ZAI_CODING_API_KEY',
       baseUrl: 'https://api.z.ai/api/coding/paas/v4',
     },
+    {
+      provider: 'deepseek',
+      displayName: 'DeepSeek',
+      envKey: 'DEEPSEEK_API_KEY',
+      baseUrl: 'https://api.deepseek.com',
+    },
   ];
   const customName = process.env['CUSTOM_PROVIDER_NAME'];
   const customBase = process.env['CUSTOM_PROVIDER_BASE_URL'];
@@ -131,6 +135,7 @@ async function main(): Promise<void> {
       maxPythonTimeoutSecs: 60,
       maxPythonCpuCores: 1,
       maxConcurrentPythonRuns: 2,
+      maxSubAgentRunMs: 300000, // 5 min
     },
     create: {
       name: 'Standard',
@@ -138,7 +143,6 @@ async function main(): Promise<void> {
       maxTokenBudget: 1000, // $10.00 in cents
       maxAgents: 2,
       maxSkills: 5,
-      maxMemoryItems: 100,
       maxGroupsOwned: 2,
       allowedProviders: [defaultProvider],
       cronEnabled: true,
@@ -150,6 +154,8 @@ async function main(): Promise<void> {
       maxPythonTimeoutSecs: 60,
       maxPythonCpuCores: 1,
       maxConcurrentPythonRuns: 2,
+      maxSubAgentRunMs: 300000, // 5 min
+      allowMcp: false,
     },
   });
   console.log(`  Policy: ${standardPolicy.name}`);
@@ -164,6 +170,7 @@ async function main(): Promise<void> {
       maxPythonTimeoutSecs: 300,
       maxPythonCpuCores: 2,
       maxConcurrentPythonRuns: 3,
+      maxSubAgentRunMs: 480000, // 8 min
     },
     create: {
       name: 'Extended',
@@ -171,7 +178,6 @@ async function main(): Promise<void> {
       maxTokenBudget: 10000, // $100.00 in cents
       maxAgents: 10,
       maxSkills: 50,
-      maxMemoryItems: 5000,
       maxGroupsOwned: 10,
       allowedProviders: extendedProviders,
       cronEnabled: true,
@@ -183,6 +189,8 @@ async function main(): Promise<void> {
       maxPythonTimeoutSecs: 300,
       maxPythonCpuCores: 2,
       maxConcurrentPythonRuns: 3,
+      maxSubAgentRunMs: 480000, // 8 min
+      allowMcp: true,
     },
   });
   console.log(`  Policy: ${extendedPolicy.name}`);
@@ -197,6 +205,7 @@ async function main(): Promise<void> {
       maxPythonTimeoutSecs: 600,
       maxPythonCpuCores: 4,
       maxConcurrentPythonRuns: 5,
+      maxSubAgentRunMs: 540000, // 9 min (kept under the 10-min stale-run reaper)
     },
     create: {
       name: 'Unrestricted',
@@ -204,7 +213,6 @@ async function main(): Promise<void> {
       maxTokenBudget: null, // unlimited
       maxAgents: 100,
       maxSkills: 500,
-      maxMemoryItems: 50000,
       maxGroupsOwned: 50,
       allowedProviders: providerSeeds.map((s) => s.provider),
       cronEnabled: true,
@@ -216,6 +224,8 @@ async function main(): Promise<void> {
       maxPythonTimeoutSecs: 600,
       maxPythonCpuCores: 4,
       maxConcurrentPythonRuns: 5,
+      maxSubAgentRunMs: 540000, // 9 min (kept under the 10-min stale-run reaper)
+      allowMcp: true,
     },
   });
   console.log(`  Policy: ${unrestrictedPolicy.name}`);
@@ -454,29 +464,6 @@ async function main(): Promise<void> {
     },
   });
   console.log(`  Group: ${engineeringGroup.name} (2 members)`);
-
-  // --- Memory Items ---
-  const memoryItem = await prisma.memoryItem.create({
-    data: {
-      ownerId: admin.id,
-      content: {
-        type: 'preference',
-        text: 'Always use TypeScript strict mode. Prefer functional patterns over classes.',
-      },
-      tags: ['coding-standards', 'typescript'],
-    },
-  });
-
-  // Share with engineering group
-  await prisma.memoryShare.create({
-    data: {
-      memoryItemId: memoryItem.id,
-      sharedBy: admin.id,
-      targetType: 'GROUP',
-      groupId: engineeringGroup.id,
-    },
-  });
-  console.log('  Memory: 1 item shared with Engineering group');
 
   // --- Audit Log entry ---
   await prisma.auditLog.create({

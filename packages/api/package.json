@@ -1,10 +1,10 @@
 {
   "name": "@clawix/api",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node --input-type=module -e \"import('fs/promises').then(fs => fs.cp('src/engine/wiki/schema-template.md', 'dist/engine/wiki/schema-template.md'))\"",
     "dev": "nest start --watch",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",
@@ -27,6 +27,7 @@
     "@fastify/helmet": "^13.0.2",
     "@fastify/multipart": "^10.0.0",
     "@google/genai": "^1.50.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@mozilla/readability": "^0.6.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",

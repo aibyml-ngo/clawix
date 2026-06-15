@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import {
   Bot,
   ChevronRight,
@@ -25,14 +26,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { ProviderModelFields, agentFormInput, useProviders } from '../agent-form-fields';
+import { AgentMcpTools } from '../agent-mcp-tools';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { ModelCombobox } from './model-combobox';
+  bindingsFromToolConfig,
+  mergeMcpIntoToolConfig,
+  type McpSelections,
+} from '../merge-tool-config';
+import { selectBoundAgentIds, type UserAgentBinding } from './bound-agents';
 import {
   Table,
   TableBody,
@@ -49,11 +50,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { authFetch } from '@/lib/auth';
+import { formString } from '@/lib/form';
+import { FieldError } from '@/components/ui/field-error';
+import { agentFormSchema, parseForm, type FieldErrors } from '@/lib/validation';
 import { cn } from '@/lib/utils';
 import { SuccessDialog } from '@/components/ui/success-dialog';
 import { useAuth } from '@/components/auth-provider';
-import { useLanguage } from '@/i18n';
 
 // ------------------------------------------------------------------ //
 //  Types                                                              //
@@ -71,6 +85,7 @@ interface AgentDefinition {
   skillIds: string[];
   maxTokensPerRun: number;
   containerConfig: Record<string, unknown>;
+  toolConfig?: Record<string, unknown>;
   isActive: boolean;
   streamingEnabled: boolean;
   isOfficial: boolean;
@@ -80,96 +95,9 @@ interface AgentDefinition {
   createdBy?: { id: string; name: string; email: string } | null;
 }
 
-interface ProviderInfo {
-  name: string;
-  displayName: string;
-  defaultModel: string;
-  models: string[];
-}
-
 interface PaginatedAgents {
   data: AgentDefinition[];
   meta: { total: number; page: number; limit: number; totalPages: number };
-}
-
-// ------------------------------------------------------------------ //
-//  Provider hook                                                      //
-// ------------------------------------------------------------------ //
-
-function useProviders() {
-  const [providers, setProviders] = useState<ProviderInfo[]>([]);
-
-  useEffect(() => {
-    void authFetch<{ data: ProviderInfo[] }>('/api/v1/agents/providers')
-      .then((res) => {
-        setProviders(Array.isArray(res.data) ? res.data : []);
-      })
-      .catch(() => {});
-  }, []);
-
-  return providers;
-}
-
-// ------------------------------------------------------------------ //
-//  Provider + Model select fields                                     //
-// ------------------------------------------------------------------ //
-
-function ProviderModelFields({
-  providers,
-  defaultProvider,
-  defaultModel,
-  idPrefix,
-}: {
-  providers: ProviderInfo[];
-  defaultProvider?: string;
-  defaultModel?: string;
-  idPrefix: string;
-}) {
-  const { t } = useLanguage();
-  const [selectedProvider, setSelectedProvider] = useState(
-    defaultProvider ?? providers[0]?.name ?? '',
-  );
-  const currentProvider = providers.find((p) => p.name === selectedProvider);
-  const models = currentProvider?.models ?? [];
-
-  useEffect(() => {
-    if (!selectedProvider && providers.length > 0) {
-      setSelectedProvider(defaultProvider ?? providers[0]!.name);
-    }
-  }, [providers, defaultProvider, selectedProvider]);
-
-  return (
-    <>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={`${idPrefix}-provider`}>{t('userAgents.provider')}</Label>
-        <Select value={selectedProvider} onValueChange={setSelectedProvider} name="provider">
-          <SelectTrigger id={`${idPrefix}-provider`} className="w-full">
-            <SelectValue placeholder={t('userAgents.selectProvider')} />
-          </SelectTrigger>
-          <SelectContent>
-            {providers.map((p) => (
-              <SelectItem key={p.name} value={p.name}>
-                {p.displayName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={`${idPrefix}-model`}>{t('userAgents.model')}</Label>
-        <ModelCombobox
-          id={`${idPrefix}-model`}
-          name="model"
-          models={models}
-          defaultValue={defaultModel ?? currentProvider?.defaultModel ?? ''}
-          placeholder={currentProvider?.defaultModel || 'model-name'}
-          required
-        />
-        <p className="text-xs text-muted-foreground">{t('userAgents.modelHint')}</p>
-      </div>
-    </>
-  );
 }
 
 // ------------------------------------------------------------------ //
@@ -200,10 +128,10 @@ function CreateAgentDialog({
    */
   allowRoleSelect?: boolean;
 }) {
-  const { t } = useLanguage();
   const providers = useProviders();
   const [streamingEnabled, setStreamingEnabled] = useState(false);
   const [isPrimary, setIsPrimary] = useState(allowRoleSelect);
+  const [errors, setErrors] = useState<FieldErrors>({});
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -217,36 +145,55 @@ function CreateAgentDialog({
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             fd.set('streamingEnabled', String(streamingEnabled));
+            const parsed = parseForm(agentFormSchema, agentFormInput(fd));
+            if (!parsed.success) {
+              setErrors(parsed.fieldErrors);
+              return;
+            }
+            setErrors({});
             onSubmit(fd);
           }}
           className="flex flex-col gap-4"
+          noValidate
         >
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-name">{t('userAgents.name')}</Label>
-            <Input id="create-name" name="name" placeholder={t('userAgents.namePlaceholder')} required />
+            <Label htmlFor="create-name">Name</Label>
+            <Input
+              id="create-name"
+              name="name"
+              placeholder="Research Assistant"
+              maxLength={100}
+              aria-invalid={errors['name'] ? true : undefined}
+              required
+            />
+            <FieldError message={errors['name']} />
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-description">{t('userAgents.description')}</Label>
+            <Label htmlFor="create-description">Description</Label>
             <textarea
               id="create-description"
               name="description"
               rows={2}
+              maxLength={500}
               className="rounded-md border bg-background px-3 py-2 text-sm"
-              placeholder={t('userAgents.descriptionPlaceholder')}
+              placeholder="Optional description of this agent"
             />
+            <FieldError message={errors['description']} />
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-systemPrompt">{t('userAgents.systemPrompt')}</Label>
+            <Label htmlFor="create-systemPrompt">System Prompt</Label>
             <textarea
               id="create-systemPrompt"
               name="systemPrompt"
               rows={6}
               className="rounded-md border bg-background px-3 py-2 text-sm"
-              placeholder={t('userAgents.systemPromptPlaceholder')}
+              placeholder="You are a helpful AI assistant..."
+              aria-invalid={errors['systemPrompt'] ? true : undefined}
               required
             />
+            <FieldError message={errors['systemPrompt']} />
           </div>
 
           {allowRoleSelect ? (
@@ -261,13 +208,16 @@ function CreateAgentDialog({
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
                   <Label htmlFor="create-isPrimary" className="text-base">
-                    {t('userAgents.primaryAgentLabel')}
+                    Primary agent
                   </Label>
                   <Badge variant={isPrimary ? 'default' : 'secondary'} className="text-[10px]">
-                    {isPrimary ? t('userAgents.badgePrimary') : t('userAgents.badgeSubAgent')}
+                    {isPrimary ? 'PRIMARY' : 'SUB-AGENT'}
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">{t('userAgents.primaryAgentHint')}</p>
+                <p className="text-sm text-muted-foreground">
+                  Primary agents are user-facing entry points. Off creates a worker (sub-agent) —
+                  invokable by primaries via tool calls.
+                </p>
               </div>
               <Switch id="create-isPrimary" checked={isPrimary} onCheckedChange={setIsPrimary} />
               <input type="hidden" name="role" value={isPrimary ? 'primary' : 'worker'} />
@@ -277,35 +227,45 @@ function CreateAgentDialog({
             <input type="hidden" name="role" value="worker" />
           )}
 
-          <ProviderModelFields providers={providers} idPrefix="create" />
+          <ProviderModelFields providers={providers} idPrefix="create" errors={errors} />
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-apiBaseUrl">{t('userAgents.apiBaseUrl')}</Label>
+            <Label htmlFor="create-apiBaseUrl">API Base URL</Label>
             <Input
               id="create-apiBaseUrl"
               name="apiBaseUrl"
+              type="url"
               placeholder="https://api.example.com/v1"
+              aria-invalid={errors['apiBaseUrl'] ? true : undefined}
             />
-            <p className="text-xs text-muted-foreground">{t('userAgents.apiBaseUrlHint')}</p>
+            <FieldError message={errors['apiBaseUrl']} />
+            <p className="text-xs text-muted-foreground">
+              Optional. Override the default API endpoint for this provider.
+            </p>
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-maxTokensPerRun">{t('userAgents.maxTokens')}</Label>
+            <Label htmlFor="create-maxTokensPerRun">Max Tokens per Run</Label>
             <Input
               id="create-maxTokensPerRun"
               name="maxTokensPerRun"
               type="number"
               defaultValue={100000}
               min={1000}
+              aria-invalid={errors['maxTokensPerRun'] ? true : undefined}
             />
+            <FieldError message={errors['maxTokensPerRun']} />
           </div>
 
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label htmlFor="create-streamingEnabled" className="text-base">
-                {t('userAgents.streaming')}
+                Streaming
               </Label>
-              <p className="text-sm text-muted-foreground">{t('userAgents.streamingHint')}</p>
+              <p className="text-sm text-muted-foreground">
+                Send each reasoning step as a separate message. When off, the user receives one
+                combined reply at the end of the run.
+              </p>
             </div>
             <Switch
               id="create-streamingEnabled"
@@ -322,11 +282,11 @@ function CreateAgentDialog({
                 onOpenChange(false);
               }}
             >
-              {t('userAgents.cancel')}
+              Cancel
             </Button>
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-              {t('userAgents.create')}
+              Create
             </Button>
           </DialogFooter>
         </form>
@@ -350,9 +310,16 @@ function EditAgentDialog({
   saving: boolean;
   onSubmit: (id: string, form: FormData) => void;
 }) {
-  const { t } = useLanguage();
   const providers = useProviders();
   const [streamingEnabled, setStreamingEnabled] = useState(agent?.streamingEnabled ?? false);
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const savedBindings = bindingsFromToolConfig(agent?.toolConfig);
+  const [mcpSelections, setMcpSelections] = useState<McpSelections>(savedBindings);
+
+  // Reset MCP selections when a different agent is opened
+  useEffect(() => {
+    setMcpSelections(bindingsFromToolConfig(agent?.toolConfig));
+  }, [agent?.id]); // intentionally omit agent?.toolConfig — reset only when a different agent opens
 
   if (!agent) return null;
 
@@ -360,53 +327,74 @@ function EditAgentDialog({
     <Dialog open={agent !== null} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t('userAgents.editAgentTitle')}</DialogTitle>
-          <DialogDescription>{t('userAgents.editAgentDesc', { name: agent.name })}</DialogDescription>
+          <DialogTitle>Edit Agent</DialogTitle>
+          <DialogDescription>Update settings for {agent.name}.</DialogDescription>
         </DialogHeader>
         <form
           onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             fd.set('streamingEnabled', String(streamingEnabled));
+            fd.set(
+              'toolConfig',
+              JSON.stringify(mergeMcpIntoToolConfig(agent.toolConfig, mcpSelections)),
+            );
+            const parsed = parseForm(agentFormSchema, agentFormInput(fd));
+            if (!parsed.success) {
+              setErrors(parsed.fieldErrors);
+              return;
+            }
+            setErrors({});
             onSubmit(agent.id, fd);
           }}
           className="flex flex-col gap-4"
+          noValidate
         >
           <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-name">{t('userAgents.name')}</Label>
-            <Input id="edit-name" name="name" defaultValue={agent.name} required />
+            <Label htmlFor="edit-name">Name</Label>
+            <Input
+              id="edit-name"
+              name="name"
+              defaultValue={agent.name}
+              maxLength={100}
+              aria-invalid={errors['name'] ? true : undefined}
+              required
+            />
+            <FieldError message={errors['name']} />
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-description">{t('userAgents.description')}</Label>
+            <Label htmlFor="edit-description">Description</Label>
             <textarea
               id="edit-description"
               name="description"
               rows={2}
+              maxLength={500}
               className="rounded-md border bg-background px-3 py-2 text-sm"
               defaultValue={agent.description}
             />
+            <FieldError message={errors['description']} />
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-systemPrompt">{t('userAgents.systemPrompt')}</Label>
+            <Label htmlFor="edit-systemPrompt">System Prompt</Label>
             <textarea
               id="edit-systemPrompt"
               name="systemPrompt"
               rows={6}
               className="rounded-md border bg-background px-3 py-2 text-sm"
               defaultValue={agent.systemPrompt}
+              aria-invalid={errors['systemPrompt'] ? true : undefined}
               required
             />
+            <FieldError message={errors['systemPrompt']} />
           </div>
 
           {/* Role cannot be changed; primary is system-only, workers stay workers */}
           <div className="flex flex-col gap-2">
-            <Label>{t('userAgents.role')}</Label>
+            <Label>Role</Label>
             <p className="text-sm text-muted-foreground">
-              {agent.role === 'primary'
-                ? t('userAgents.rolePrimarySystem')
-                : t('userAgents.roleWorkerSub')}
+              {agent.role === 'primary' ? 'Primary (system)' : 'Worker (Sub-Agent)'}
             </p>
             <input type="hidden" name="role" value={agent.role} />
           </div>
@@ -416,36 +404,47 @@ function EditAgentDialog({
             defaultProvider={agent.provider}
             defaultModel={agent.model}
             idPrefix="edit"
+            errors={errors}
           />
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-apiBaseUrl">{t('userAgents.apiBaseUrl')}</Label>
+            <Label htmlFor="edit-apiBaseUrl">API Base URL</Label>
             <Input
               id="edit-apiBaseUrl"
               name="apiBaseUrl"
+              type="url"
               defaultValue={agent.apiBaseUrl ?? ''}
               placeholder="https://api.example.com/v1"
+              aria-invalid={errors['apiBaseUrl'] ? true : undefined}
             />
-            <p className="text-xs text-muted-foreground">{t('userAgents.apiBaseUrlHint')}</p>
+            <FieldError message={errors['apiBaseUrl']} />
+            <p className="text-xs text-muted-foreground">
+              Optional. Override the default API endpoint for this provider.
+            </p>
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-maxTokensPerRun">{t('userAgents.maxTokens')}</Label>
+            <Label htmlFor="edit-maxTokensPerRun">Max Tokens per Run</Label>
             <Input
               id="edit-maxTokensPerRun"
               name="maxTokensPerRun"
               type="number"
               defaultValue={agent.maxTokensPerRun ?? 100000}
               min={1000}
+              aria-invalid={errors['maxTokensPerRun'] ? true : undefined}
             />
+            <FieldError message={errors['maxTokensPerRun']} />
           </div>
 
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label htmlFor="edit-streamingEnabled" className="text-base">
-                {t('userAgents.streaming')}
+                Streaming
               </Label>
-              <p className="text-sm text-muted-foreground">{t('userAgents.streamingHint')}</p>
+              <p className="text-sm text-muted-foreground">
+                Send each reasoning step as a separate message. When off, the user receives one
+                combined reply at the end of the run.
+              </p>
             </div>
             <Switch
               id="edit-streamingEnabled"
@@ -453,6 +452,12 @@ function EditAgentDialog({
               onCheckedChange={setStreamingEnabled}
             />
           </div>
+
+          <AgentMcpTools
+            saved={savedBindings}
+            selections={mcpSelections}
+            onChange={setMcpSelections}
+          />
 
           <DialogFooter>
             <Button
@@ -462,11 +467,11 @@ function EditAgentDialog({
                 onOpenChange(false);
               }}
             >
-              {t('userAgents.cancel')}
+              Cancel
             </Button>
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-              {t('userAgents.save')}
+              Save
             </Button>
           </DialogFooter>
         </form>
@@ -495,11 +500,10 @@ function OfficialAgentsTable({
   /** AgentDefinition.id values bound to the current user via UserAgent. */
   boundAgentIds: ReadonlySet<string>;
 }) {
-  const { t } = useLanguage();
   if (agents.length === 0) {
     return (
       <div className="rounded-md border bg-background/30 backdrop-blur-sm p-4 text-center text-sm text-muted-foreground">
-        {t('userAgents.noPublicAgents')}
+        No public agents configured.
       </div>
     );
   }
@@ -509,11 +513,11 @@ function OfficialAgentsTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('userAgents.colAgent')}</TableHead>
-            <TableHead>{t('userAgents.colModel')}</TableHead>
-            <TableHead>{t('userAgents.colRole')}</TableHead>
-            <TableHead>{t('userAgents.colType')}</TableHead>
-            <TableHead>{t('userAgents.colEnabled')}</TableHead>
+            <TableHead>Agent</TableHead>
+            <TableHead>Model</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Enabled</TableHead>
             <TableHead className="w-[50px]" />
           </TableRow>
         </TableHeader>
@@ -531,23 +535,21 @@ function OfficialAgentsTable({
               </TableCell>
               <TableCell>
                 <Badge variant={agent.role === 'primary' ? 'default' : 'secondary'}>
-                  {agent.role === 'primary'
-                    ? t('userAgents.rolePrimary')
-                    : t('userAgents.roleWorker')}
+                  {agent.role}
                 </Badge>
               </TableCell>
               <TableCell>
-                <Badge variant="outline">{t('userAgents.typePublic')}</Badge>
+                <Badge variant="outline">Public</Badge>
               </TableCell>
               <TableCell>
                 {agent.role === 'primary' ? (
                   boundAgentIds.has(agent.id) ? (
                     <Badge className="border-emerald-500/40 bg-emerald-500/15 text-emerald-400">
-                      {t('userAgents.active')}
+                      Active
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="text-muted-foreground">
-                      {t('userAgents.inactive')}
+                      Inactive
                     </Badge>
                   )
                 ) : (
@@ -579,11 +581,11 @@ function OfficialAgentsTable({
                           onEdit(agent);
                         }}
                       >
-                        {t('userAgents.edit')}
+                        Edit
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem asChild>
-                      <Link href={`/agents/${agent.id}`}>{t('userAgents.viewRuns')}</Link>
+                      <Link href={`/agents/${agent.id}`}>View Runs</Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -615,11 +617,10 @@ function SubAgentsTable({
   onToggleActive: (agent: AgentDefinition) => void;
   isAdminViewing?: boolean;
 }) {
-  const { t } = useLanguage();
   if (agents.length === 0) {
     return (
       <div className="rounded-md border bg-background/30 backdrop-blur-sm p-4 text-center text-sm text-muted-foreground">
-        {t('userAgents.noSubAgents')}
+        No sub-agents created.
       </div>
     );
   }
@@ -629,11 +630,11 @@ function SubAgentsTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('userAgents.colAgent')}</TableHead>
-            <TableHead>{t('userAgents.colModel')}</TableHead>
-            <TableHead>{t('userAgents.colRole')}</TableHead>
-            <TableHead>{t('userAgents.colType')}</TableHead>
-            <TableHead>{t('userAgents.colEnabled')}</TableHead>
+            <TableHead>Agent</TableHead>
+            <TableHead>Model</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Enabled</TableHead>
             <TableHead className="w-[50px]" />
           </TableRow>
         </TableHeader>
@@ -650,18 +651,14 @@ function SubAgentsTable({
                 {agent.provider} / {agent.model}
               </TableCell>
               <TableCell>
-                <Badge variant="secondary">
-                  {agent.role === 'primary'
-                    ? t('userAgents.rolePrimary')
-                    : t('userAgents.roleWorker')}
-                </Badge>
+                <Badge variant="secondary">{agent.role}</Badge>
               </TableCell>
               <TableCell>
-                <Badge variant="secondary">{t('userAgents.typePrivate')}</Badge>
+                <Badge variant="secondary">Private</Badge>
               </TableCell>
               <TableCell>
                 {agent.role === 'primary' ? (
-                  <span className="text-muted-foreground text-sm">{t('userAgents.alwaysOn')}</span>
+                  <span className="text-muted-foreground text-sm">Always on</span>
                 ) : (
                   <Switch
                     checked={agent.isActive}
@@ -691,7 +688,7 @@ function SubAgentsTable({
                           onEdit(agent);
                         }}
                       >
-                        {t('userAgents.edit')}
+                        Edit
                       </DropdownMenuItem>
                     )}
                     {isAdminViewing && !canEdit && (
@@ -700,11 +697,11 @@ function SubAgentsTable({
                           onEdit(agent);
                         }}
                       >
-                        {t('userAgents.viewDetails')}
+                        View Details
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem asChild>
-                      <Link href={`/agents/${agent.id}`}>{t('userAgents.viewRuns')}</Link>
+                      <Link href={`/agents/${agent.id}`}>View Runs</Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -738,7 +735,6 @@ function UserSubAgentsSection({
   onEdit: (agent: AgentDefinition) => void;
   onToggleActive: (agent: AgentDefinition) => void;
 }) {
-  const { t } = useLanguage();
   return (
     <Collapsible
       defaultOpen={defaultOpen}
@@ -751,7 +747,7 @@ function UserSubAgentsSection({
           <p className="text-sm text-muted-foreground">{userEmail}</p>
         </div>
         <Badge variant="outline" className="mr-2">
-          {t('userAgents.subAgentCount', { n: agents.length })}
+          {agents.length} sub-agent{agents.length !== 1 ? 's' : ''}
         </Badge>
       </CollapsibleTrigger>
       <CollapsibleContent>
@@ -824,7 +820,6 @@ function AgentRunDialog({
   runId: string | null;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { t } = useLanguage();
   const [run, setRun] = useState<AgentRunDetail | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -854,7 +849,7 @@ function AgentRunDialog({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Bot className="size-5" />
-                {t('userAgents.loading')}
+                Loading...
               </DialogTitle>
             </DialogHeader>
             <div className="flex justify-center py-8">
@@ -869,9 +864,9 @@ function AgentRunDialog({
                 {run.agentDefinition.name}
               </DialogTitle>
               <DialogDescription>
-                {t('userAgents.runStarted', { time: formatTime(run.startedAt) })}
+                Run started {formatTime(run.startedAt)}
                 {run.completedAt &&
-                  ` • ${t('userAgents.runDuration', { dur: formatDuration(run.startedAt, run.completedAt) })}`}
+                  ` • Duration: ${formatDuration(run.startedAt, run.completedAt)}`}
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-4">
@@ -890,13 +885,13 @@ function AgentRunDialog({
                 {run.parentAgentRunId && (
                   <Badge variant="outline" className="gap-1">
                     <GitBranch className="size-3" />
-                    {t('userAgents.subAgentBadge')}
+                    sub-agent
                   </Badge>
                 )}
               </div>
 
               <div className="flex flex-col gap-1">
-                <Label className="text-muted-foreground">{t('userAgents.colInput')}</Label>
+                <Label className="text-muted-foreground">Input</Label>
                 <div className="rounded-md border bg-muted/50 p-3">
                   <pre className="whitespace-pre-wrap text-sm">{run.input}</pre>
                 </div>
@@ -904,7 +899,7 @@ function AgentRunDialog({
 
               {run.output && (
                 <div className="flex flex-col gap-1">
-                  <Label className="text-muted-foreground">{t('userAgents.output')}</Label>
+                  <Label className="text-muted-foreground">Output</Label>
                   <div className="rounded-md border bg-muted/50 p-3 max-h-[300px] overflow-y-auto">
                     <pre className="whitespace-pre-wrap text-sm">{run.output}</pre>
                   </div>
@@ -913,7 +908,7 @@ function AgentRunDialog({
 
               {run.error && (
                 <div className="flex flex-col gap-1">
-                  <Label className="text-destructive">{t('userAgents.runError')}</Label>
+                  <Label className="text-destructive">Error</Label>
                   <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 max-h-[200px] overflow-y-auto">
                     <pre className="whitespace-pre-wrap text-sm text-destructive">{run.error}</pre>
                   </div>
@@ -922,7 +917,7 @@ function AgentRunDialog({
 
               {run.toolCallMessages && run.toolCallMessages.length > 0 && (
                 <div className="flex flex-col gap-1">
-                  <Label className="text-muted-foreground">{t('userAgents.toolCalls')}</Label>
+                  <Label className="text-muted-foreground">Tool Calls</Label>
                   <div className="space-y-2">
                     {run.toolCallMessages.map((msg) => (
                       <div key={msg.id} className="rounded-md border bg-muted/50 p-3">
@@ -955,7 +950,7 @@ function AgentRunDialog({
                         ) : msg.toolCallId ? (
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs text-muted-foreground">{t('userAgents.toolResult')}</span>
+                              <span className="text-xs text-muted-foreground">Tool Result</span>
                             </div>
                             <pre className="whitespace-pre-wrap text-xs text-muted-foreground bg-background/50 p-2 rounded max-h-[150px] overflow-y-auto">
                               {(() => {
@@ -978,7 +973,7 @@ function AgentRunDialog({
 
               {run.tokenUsage && Object.keys(run.tokenUsage).length > 0 && (
                 <div className="flex flex-col gap-1">
-                  <Label className="text-muted-foreground">{t('userAgents.tokenUsage')}</Label>
+                  <Label className="text-muted-foreground">Token Usage</Label>
                   <div className="rounded-md border bg-muted/50 p-3">
                     <pre className="whitespace-pre-wrap text-xs text-muted-foreground">
                       {JSON.stringify(run.tokenUsage, null, 2)}
@@ -993,10 +988,10 @@ function AgentRunDialog({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Bot className="size-5" />
-                {t('userAgents.runError')}
+                Error
               </DialogTitle>
             </DialogHeader>
-            <div className="text-center text-muted-foreground py-4">{t('userAgents.failedLoadRun')}</div>
+            <div className="text-center text-muted-foreground py-4">Failed to load run details</div>
           </>
         )}
       </DialogContent>
@@ -1005,7 +1000,6 @@ function AgentRunDialog({
 }
 
 function RecentRuns() {
-  const { t } = useLanguage();
   const [runs, setRuns] = useState<AgentRunEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -1016,7 +1010,11 @@ function RecentRuns() {
         .then((res) => {
           setRuns(Array.isArray(res.data) ? res.data : []);
         })
-        .catch(() => {})
+        .catch((e: unknown) => {
+          toast.error(e instanceof Error ? e.message : 'Failed to load recent runs', {
+            id: 'recent-runs-fetch',
+          });
+        })
         .finally(() => {
           setLoading(false);
         });
@@ -1040,7 +1038,7 @@ function RecentRuns() {
   if (runs.length === 0) {
     return (
       <div className="rounded-md border bg-background/30 backdrop-blur-sm p-4 text-center text-sm text-muted-foreground">
-        {t('userAgents.noRuns')}
+        No agent runs yet.
       </div>
     );
   }
@@ -1051,12 +1049,12 @@ function RecentRuns() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('userAgents.colAgent')}</TableHead>
-              <TableHead>{t('userAgents.colType')}</TableHead>
-              <TableHead>{t('userAgents.colInput')}</TableHead>
-              <TableHead>{t('userAgents.colStatus')}</TableHead>
-              <TableHead>{t('userAgents.colDuration')}</TableHead>
-              <TableHead>{t('userAgents.colTime')}</TableHead>
+              <TableHead>Agent</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Input</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Duration</TableHead>
+              <TableHead>Time</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1078,14 +1076,10 @@ function RecentRuns() {
                   {run.parentAgentRunId ? (
                     <Badge variant="outline" className="gap-1">
                       <GitBranch className="size-3" />
-                      {t('userAgents.subAgentBadge')}
+                      sub-agent
                     </Badge>
                   ) : (
-                    <Badge variant="secondary">
-                      {run.agentDefinition.role === 'primary'
-                        ? t('userAgents.rolePrimary')
-                        : t('userAgents.roleWorker')}
-                    </Badge>
+                    <Badge variant="secondary">{run.agentDefinition.role}</Badge>
                   )}
                 </TableCell>
                 <TableCell className="max-w-[200px]">
@@ -1136,29 +1130,28 @@ function ViewAgentDialog({
   agent: AgentDefinition | null;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { t } = useLanguage();
   if (!agent) return null;
 
   return (
     <Dialog open={agent !== null} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t('userAgents.viewAgentTitle')}</DialogTitle>
-          <DialogDescription>{t('userAgents.viewAgentDesc', { name: agent.name })}</DialogDescription>
+          <DialogTitle>View Agent Details</DialogTitle>
+          <DialogDescription>Details for {agent.name} (read-only)</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <Label className="text-muted-foreground">{t('userAgents.name')}</Label>
+            <Label className="text-muted-foreground">Name</Label>
             <p className="text-sm">{agent.name}</p>
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label className="text-muted-foreground">{t('userAgents.description')}</Label>
+            <Label className="text-muted-foreground">Description</Label>
             <p className="text-sm">{agent.description || '—'}</p>
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label className="text-muted-foreground">{t('userAgents.systemPrompt')}</Label>
+            <Label className="text-muted-foreground">System Prompt</Label>
             <pre className="rounded-md border bg-muted/50 p-3 text-xs whitespace-pre-wrap max-h-[200px] overflow-y-auto">
               {agent.systemPrompt}
             </pre>
@@ -1166,38 +1159,30 @@ function ViewAgentDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
-              <Label className="text-muted-foreground">{t('userAgents.role')}</Label>
-              <p className="text-sm">
-                {agent.role === 'primary'
-                  ? t('userAgents.rolePrimary')
-                  : t('userAgents.roleWorker')}
-              </p>
+              <Label className="text-muted-foreground">Role</Label>
+              <p className="text-sm">{agent.role}</p>
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-muted-foreground">{t('userAgents.status')}</Label>
+              <Label className="text-muted-foreground">Status</Label>
               <p className="text-sm">
-                {agent.role === 'primary'
-                  ? t('userAgents.alwaysOn')
-                  : agent.isActive
-                    ? t('userAgents.active')
-                    : t('userAgents.inactive')}
+                {agent.role === 'primary' ? 'Always on' : agent.isActive ? 'Active' : 'Inactive'}
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
-              <Label className="text-muted-foreground">{t('userAgents.provider')}</Label>
+              <Label className="text-muted-foreground">Provider</Label>
               <p className="text-sm">{agent.provider}</p>
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-muted-foreground">{t('userAgents.model')}</Label>
+              <Label className="text-muted-foreground">Model</Label>
               <p className="text-sm">{agent.model}</p>
             </div>
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label className="text-muted-foreground">{t('userAgents.maxTokens')}</Label>
+            <Label className="text-muted-foreground">Max Tokens per Run</Label>
             <p className="text-sm">{agent.maxTokensPerRun?.toLocaleString()}</p>
           </div>
 
@@ -1208,7 +1193,7 @@ function ViewAgentDialog({
                 onOpenChange(false);
               }}
             >
-              {t('userAgents.close')}
+              Close
             </Button>
           </DialogFooter>
         </div>
@@ -1222,7 +1207,6 @@ function ViewAgentDialog({
 // ------------------------------------------------------------------ //
 
 export default function UserAgentsPage() {
-  const { t } = useLanguage();
   const { user } = useAuth();
   const [officialAgents, setOfficialAgents] = useState<AgentDefinition[]>([]);
   const [boundAgentIds, setBoundAgentIds] = useState<ReadonlySet<string>>(new Set());
@@ -1250,11 +1234,14 @@ export default function UserAgentsPage() {
       const [agentsRes, userAgentsRes] = await Promise.all([
         authFetch<PaginatedAgents>('/api/v1/agents?limit=100&includeCreatedBy=true'),
         // Endpoint returns the array directly, not wrapped in { data }.
-        authFetch<{ agentDefinitionId: string }[]>('/api/v1/agents/user-agents').catch(() => []),
+        // For admins it returns ALL users' bindings, so selectBoundAgentIds
+        // filters to the current user — boundAgentIds must only reflect *my*
+        // assigned primary.
+        authFetch<UserAgentBinding[]>('/api/v1/agents/user-agents').catch(() => []),
       ]);
       const all = Array.isArray(agentsRes.data) ? agentsRes.data : [];
       const bindings = Array.isArray(userAgentsRes) ? userAgentsRes : [];
-      setBoundAgentIds(new Set(bindings.map((b) => b.agentDefinitionId)));
+      setBoundAgentIds(selectBoundAgentIds(bindings, currentUserId));
 
       // Official agents (primary first, then workers)
       setOfficialAgents(
@@ -1291,11 +1278,11 @@ export default function UserAgentsPage() {
         setOtherUsersSubAgents(grouped);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('userAgents.loadError'));
+      setError(err instanceof Error ? err.message : 'Failed to load agents');
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, currentUserId, t]);
+  }, [isAdmin, currentUserId]);
 
   useEffect(() => {
     void fetchAgents();
@@ -1305,7 +1292,7 @@ export default function UserAgentsPage() {
     setSaving(true);
     setError('');
     try {
-      const name = form.get('name') as string;
+      const name = formString(form, 'name');
       await authFetch('/api/v1/agents', {
         method: 'POST',
         body: JSON.stringify({
@@ -1316,16 +1303,16 @@ export default function UserAgentsPage() {
           provider: form.get('provider'),
           model: form.get('model'),
           apiBaseUrl: form.get('apiBaseUrl') || undefined,
-          maxTokensPerRun: Number(form.get('maxTokensPerRun')) || 100000,
+          maxTokensPerRun: Number(formString(form, 'maxTokensPerRun')),
           streamingEnabled: form.get('streamingEnabled') === 'true',
           isOfficial: true,
         }),
       });
       setCreateOfficialOpen(false);
       await fetchAgents();
-      setSuccessMessage(t('userAgents.created', { name }));
+      setSuccessMessage(`${name} has been created.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('userAgents.createError'));
+      setError(err instanceof Error ? err.message : 'Failed to create agent');
     } finally {
       setSaving(false);
     }
@@ -1335,7 +1322,7 @@ export default function UserAgentsPage() {
     setSaving(true);
     setError('');
     try {
-      const name = form.get('name') as string;
+      const name = formString(form, 'name');
       await authFetch('/api/v1/agents', {
         method: 'POST',
         body: JSON.stringify({
@@ -1346,16 +1333,16 @@ export default function UserAgentsPage() {
           provider: form.get('provider'),
           model: form.get('model'),
           apiBaseUrl: form.get('apiBaseUrl') || undefined,
-          maxTokensPerRun: Number(form.get('maxTokensPerRun')) || 100000,
+          maxTokensPerRun: Number(formString(form, 'maxTokensPerRun')),
           streamingEnabled: form.get('streamingEnabled') === 'true',
           isOfficial: false,
         }),
       });
       setCreateSubOpen(false);
       await fetchAgents();
-      setSuccessMessage(t('userAgents.created', { name }));
+      setSuccessMessage(`${name} has been created.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('userAgents.createSubError'));
+      setError(err instanceof Error ? err.message : 'Failed to create sub-agent');
     } finally {
       setSaving(false);
     }
@@ -1375,14 +1362,17 @@ export default function UserAgentsPage() {
           provider: form.get('provider'),
           model: form.get('model'),
           apiBaseUrl: form.get('apiBaseUrl') || undefined,
-          maxTokensPerRun: Number(form.get('maxTokensPerRun')) || 100000,
+          maxTokensPerRun: Number(formString(form, 'maxTokensPerRun')),
           streamingEnabled: form.get('streamingEnabled') === 'true',
+          toolConfig: form.get('toolConfig')
+            ? (JSON.parse(formString(form, 'toolConfig')) as Record<string, unknown>)
+            : undefined,
         }),
       });
       setEditAgent(null);
       await fetchAgents();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('userAgents.updateError'));
+      setError(err instanceof Error ? err.message : 'Failed to update agent');
     } finally {
       setSaving(false);
     }
@@ -1398,7 +1388,7 @@ export default function UserAgentsPage() {
       });
       await fetchAgents();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('userAgents.updateError'));
+      setError(err instanceof Error ? err.message : 'Failed to update agent');
     } finally {
       setSaving(false);
     }
@@ -1418,13 +1408,15 @@ export default function UserAgentsPage() {
       <div className="flex items-center justify-between border-b border-border/60 pb-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">{t('userAgents.title')}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Agents</h1>
             <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground/70">
-              {t('userAgents.eyebrow')}
+              orchestration
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
-            {isAdmin ? t('userAgents.introAdmin') : t('userAgents.introUser')}
+            {isAdmin
+              ? "Manage official agents and monitor all users' sub-agents."
+              : 'View official agents and manage your sub-agents.'}
           </p>
         </div>
       </div>
@@ -1444,7 +1436,7 @@ export default function UserAgentsPage() {
           {/* Public Agents Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{t('userAgents.publicAgents')}</h2>
+              <h2 className="text-lg font-semibold">Public Agents</h2>
               {isAdmin && (
                 <Button
                   size="sm"
@@ -1453,7 +1445,7 @@ export default function UserAgentsPage() {
                   }}
                 >
                   <Plus className="mr-1 size-4" />
-                  {t('userAgents.createAgent')}
+                  Create Agent
                 </Button>
               )}
             </div>
@@ -1470,7 +1462,7 @@ export default function UserAgentsPage() {
           {/* My Sub-Agents Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{t('userAgents.mySubAgents')}</h2>
+              <h2 className="text-lg font-semibold">My Sub-Agents</h2>
               <Button
                 size="sm"
                 variant="outline"
@@ -1479,7 +1471,7 @@ export default function UserAgentsPage() {
                 }}
               >
                 <Plus className="mr-1 size-4" />
-                {t('userAgents.createSubAgent')}
+                Create Sub-Agent
               </Button>
             </div>
             <SubAgentsTable
@@ -1494,7 +1486,7 @@ export default function UserAgentsPage() {
           {/* Other Users' Sub-Agents (Admin only) */}
           {isAdmin && otherUsersSubAgents.size > 0 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold">{t('userAgents.otherUsersSubAgents')}</h2>
+              <h2 className="text-lg font-semibold">Other Users&apos; Sub-Agents</h2>
               <div className="space-y-3">
                 {Array.from(otherUsersSubAgents.entries()).map(
                   ([userId, { user: userData, agents }]) => (
@@ -1520,21 +1512,53 @@ export default function UserAgentsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="size-5 text-muted-foreground" />
-                <h2 className="text-lg font-semibold">{t('userAgents.recentRuns')}</h2>
+                <h2 className="text-lg font-semibold">Recent Agent Runs</h2>
               </div>
-              <Button
-                size="sm"
-                variant="destructive"
-                className="gap-1"
-                onClick={() => {
-                  void authFetch('/api/v1/chat/agent-runs/stop', { method: 'POST' })
-                    .then(() => fetchAgents())
-                    .catch(() => {});
-                }}
-              >
-                <Square className="size-3" />
-                {t('userAgents.stopAll')}
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="destructive" className="gap-1">
+                    <Square className="size-3" />
+                    Stop All
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Stop all running agent runs?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This aborts every agent run you currently have in progress. Partial work
+                      already streamed to chat is preserved, but the runs will not continue. This
+                      cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        void authFetch<{ stopped: number }>('/api/v1/chat/agent-runs/stop', {
+                          method: 'POST',
+                        })
+                          .then((res) => {
+                            const n = typeof res.stopped === 'number' ? res.stopped : 0;
+                            toast.success(
+                              n > 0
+                                ? `Stopped ${n} agent run${n === 1 ? '' : 's'}`
+                                : 'No running agent runs to stop',
+                            );
+                            return fetchAgents();
+                          })
+                          .catch((e: unknown) => {
+                            toast.error(
+                              e instanceof Error ? e.message : 'Failed to stop agent runs',
+                            );
+                          });
+                      }}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Stop all runs
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
             <RecentRuns />
           </div>
@@ -1548,8 +1572,8 @@ export default function UserAgentsPage() {
         onOpenChange={setCreateOfficialOpen}
         saving={saving}
         onSubmit={handleCreateOfficial}
-        title={t('userAgents.createPublicTitle')}
-        description={t('userAgents.createPublicDesc')}
+        title="Create Public Agent"
+        description="Create a new public agent — primary (entry point) or sub-agent — available to all users."
         allowRoleSelect
       />
 
@@ -1560,8 +1584,8 @@ export default function UserAgentsPage() {
         onOpenChange={setCreateSubOpen}
         saving={saving}
         onSubmit={handleCreateSub}
-        title={t('userAgents.createSubTitle')}
-        description={t('userAgents.createSubDesc')}
+        title="Create Sub-Agent"
+        description="Create a custom sub-agent for specialized tasks."
       />
 
       {/* Edit Agent Dialog */}
@@ -1588,7 +1612,7 @@ export default function UserAgentsPage() {
         onOpenChange={(open) => {
           if (!open) setSuccessMessage('');
         }}
-        title={t('userAgents.success')}
+        title="Success"
         description={successMessage}
       />
     </div>

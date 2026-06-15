@@ -5,7 +5,6 @@ import { Bot, Send, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { authFetch } from '@/lib/auth';
-import { useLanguage } from '@/i18n';
 
 /* ------------------------------------------------------------------ */
 /*  Slash commands & skills                                            */
@@ -13,45 +12,40 @@ import { useLanguage } from '@/i18n';
 
 interface SlashItem {
   name: string;
-  /** Display description. For builtin commands this is a `conv.*` i18n key resolved at render. */
   description: string;
   type: 'command' | 'skill';
-  /** True when `description` is an i18n key (builtin commands) rather than literal text (skills). */
-  descriptionIsKey?: boolean;
 }
 
 const builtinCommands: SlashItem[] = [
   {
     name: '/reset',
-    description: 'conv.cmdReset',
+    description: 'Start a fresh conversation (current session is archived)',
     type: 'command',
-    descriptionIsKey: true,
   },
   {
     name: '/compact',
-    description: 'conv.cmdCompact',
+    description: 'Summarize conversation context to free up space',
     type: 'command',
-    descriptionIsKey: true,
   },
-  { name: '/help', description: 'conv.cmdHelp', type: 'command', descriptionIsKey: true },
+  { name: '/help', description: 'Show available commands', type: 'command' },
 ];
 
 const suggestions = [
   {
-    titleKey: 'conv.suggest1Title',
-    descriptionKey: 'conv.suggest1Desc',
+    title: 'Draft a launch announcement',
+    description: 'for next quarter’s product release',
   },
   {
-    titleKey: 'conv.suggest2Title',
-    descriptionKey: 'conv.suggest2Desc',
+    title: 'Brainstorm campaign ideas',
+    description: 'targeting SMB customers on LinkedIn',
   },
   {
-    titleKey: 'conv.suggest3Title',
-    descriptionKey: 'conv.suggest3Desc',
+    title: 'Summarize this month’s pipeline',
+    description: 'with top deals and risks called out',
   },
   {
-    titleKey: 'conv.suggest4Title',
-    descriptionKey: 'conv.suggest4Desc',
+    title: 'Write a customer follow-up email',
+    description: 'after a discovery call',
   },
 ];
 
@@ -84,27 +78,22 @@ function SuggestionCard({
 /* ------------------------------------------------------------------ */
 
 export function EmptyState({ onSelectSuggestion }: { onSelectSuggestion: (text: string) => void }) {
-  const { t } = useLanguage();
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-8">
       <div className="flex size-12 items-center justify-center rounded-full border border-foreground/20 bg-muted">
         <Bot className="size-6" />
       </div>
       <div className="grid w-full max-w-[768px] grid-cols-2 gap-2">
-        {suggestions.map((s) => {
-          const title = t(s.titleKey);
-          const description = t(s.descriptionKey);
-          return (
-            <SuggestionCard
-              key={s.titleKey}
-              title={title}
-              description={description}
-              onClick={() => {
-                onSelectSuggestion(`${title} ${description}`);
-              }}
-            />
-          );
-        })}
+        {suggestions.map((s) => (
+          <SuggestionCard
+            key={s.title}
+            title={s.title}
+            description={s.description}
+            onClick={() => {
+              onSelectSuggestion(`${s.title} ${s.description}`);
+            }}
+          />
+        ))}
       </div>
     </div>
   );
@@ -125,7 +114,6 @@ export function ChatInput({
   isConnected: boolean;
   userMessages?: string[];
 }) {
-  const { t } = useLanguage();
   const [value, setValue] = useState('');
   const [mounted, setMounted] = useState(false);
   const [showCommands, setShowCommands] = useState(false);
@@ -140,20 +128,41 @@ export function ChatInput({
     setMounted(true);
   }, []);
 
-  // Fetch skills and merge with builtin commands
+  // Fetch skills and merge with builtin commands.
+  // Retries silently with exponential backoff (1s → 3s → 6s, up to 3 retries)
+  // before falling back to builtins for the session. Issue #114 — single
+  // failed fetch should not lock the user out of skills for the entire tab.
   useEffect(() => {
-    void authFetch<{ data: { name: string; description: string }[] }>('/api/v1/skills')
-      .then((res) => {
-        const skills: SlashItem[] = (Array.isArray(res.data) ? res.data : []).map((s) => ({
-          name: `/${s.name}`,
-          description: s.description,
-          type: 'skill' as const,
-        }));
-        setSlashItems([...skills, ...builtinCommands]);
-      })
-      .catch(() => {
-        /* keep builtin commands only */
-      });
+    let cancelled = false;
+    const attemptDelays = [1_000, 3_000, 6_000];
+
+    const run = async () => {
+      for (let attempt = 0; attempt <= attemptDelays.length; attempt++) {
+        if (cancelled) return;
+        try {
+          const res = await authFetch<{ data: { name: string; description: string }[] }>(
+            '/api/v1/skills',
+          );
+          if (cancelled) return;
+          const skills: SlashItem[] = (Array.isArray(res.data) ? res.data : []).map((s) => ({
+            name: `/${s.name}`,
+            description: s.description,
+            type: 'skill' as const,
+          }));
+          setSlashItems([...skills, ...builtinCommands]);
+          return;
+        } catch {
+          const delay = attemptDelays[attempt];
+          if (delay === undefined) return;
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Filter commands based on current input
@@ -245,9 +254,7 @@ export function ChatInput({
                   <Wrench className="size-3.5 shrink-0 text-muted-foreground" />
                 )}
                 <span className="shrink-0 font-mono font-medium">{cmd.name}</span>
-                <span className="truncate text-muted-foreground">
-                  {cmd.descriptionIsKey ? t(cmd.description) : cmd.description}
-                </span>
+                <span className="truncate text-muted-foreground">{cmd.description}</span>
               </button>
             ))}
           </div>
@@ -257,7 +264,8 @@ export function ChatInput({
           <textarea
             ref={textareaRef}
             rows={1}
-            placeholder={t('conv.inputPlaceholder')}
+            placeholder="Type / for commands or send a message..."
+            aria-label="Chat message"
             className="flex-1 resize-none bg-transparent px-2 py-1 text-sm outline-none placeholder:text-muted-foreground"
             value={value}
             onChange={(e) => {
@@ -291,8 +299,25 @@ export function ChatInput({
                   return;
                 }
               }
-              // Input history: ArrowUp/Down when not in slash menu
+              // Input history: ArrowUp/Down when not in slash menu. Only
+              // hijack the arrow when the caret sits at the absolute editable
+              // edge — start of the text for ArrowUp, end for ArrowDown — with a
+              // collapsed selection, so any in-draft edit (including soft-wrapped
+              // long lines that contain no '\n') moves the caret between rows as
+              // normal. We gate on caret *offset*, not logical-line detection:
+              // a CSS-wrapped line has no newline, so a '\n' scan would treat
+              // every wrapped row as the first/last line and wrongly recall
+              // history (#157). After restoring an entry we move the caret to
+              // that same edge (start for ArrowUp, end for ArrowDown) so repeated
+              // presses keep chaining through history, and schedule an autoResize
+              // on the next tick so the textarea grows/shrinks to match — onChange
+              // does not fire for setValue() and stale heights truncate long
+              // entries.
               if (e.key === 'ArrowUp' && !showCommands && inputHistory.length > 0) {
+                const el = e.currentTarget;
+                const caretAtStart =
+                  el.selectionStart === el.selectionEnd && el.selectionStart === 0;
+                if (!caretAtStart) return;
                 if (historyIndexRef.current === -1) {
                   savedInputRef.current = value;
                 }
@@ -300,11 +325,20 @@ export function ChatInput({
                 if (nextIndex !== historyIndexRef.current || historyIndexRef.current === -1) {
                   historyIndexRef.current = nextIndex;
                   setValue(inputHistory[nextIndex]!);
+                  setTimeout(() => {
+                    autoResize();
+                    const ta = textareaRef.current;
+                    if (ta) ta.selectionStart = ta.selectionEnd = 0;
+                  }, 0);
                   e.preventDefault();
                 }
                 return;
               }
               if (e.key === 'ArrowDown' && !showCommands && historyIndexRef.current >= 0) {
+                const el = e.currentTarget;
+                const caretAtEnd =
+                  el.selectionStart === el.selectionEnd && el.selectionStart === el.value.length;
+                if (!caretAtEnd) return;
                 e.preventDefault();
                 const nextIndex = historyIndexRef.current - 1;
                 historyIndexRef.current = nextIndex;
@@ -313,6 +347,11 @@ export function ChatInput({
                 } else {
                   setValue(inputHistory[nextIndex]!);
                 }
+                setTimeout(() => {
+                  autoResize();
+                  const ta = textareaRef.current;
+                  if (ta) ta.selectionStart = ta.selectionEnd = ta.value.length;
+                }, 0);
                 return;
               }
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -327,6 +366,7 @@ export function ChatInput({
           />
           <Button
             size="icon"
+            aria-label="Send message"
             className="size-8 shrink-0 rounded-full"
             disabled={!value.trim() || disabled || !isConnected}
             onClick={handleSend}
@@ -342,8 +382,7 @@ export function ChatInput({
                 isConnected ? 'animate-pulse bg-green-500' : 'bg-red-500',
               )}
             />
-            {isConnected ? t('conv.connected') : t('conv.disconnected')} &mdash;{' '}
-            {t('conv.agentDisclaimer')}
+            {isConnected ? 'Connected' : 'Disconnected'} &mdash; Clawix agents can make errors.
           </p>
         )}
       </div>

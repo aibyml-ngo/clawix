@@ -14,128 +14,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { authFetch } from '@/lib/auth';
-import { useLanguage } from '@/i18n';
+import { FieldError } from '@/components/ui/field-error';
+import { agentFormSchema, parseForm, type FieldErrors } from '@/lib/validation';
+import { ProviderModelFields, agentFormInput, useProviders } from './agent-form-fields';
+import { AgentMcpTools } from './agent-mcp-tools';
+import {
+  bindingsFromToolConfig,
+  mergeMcpIntoToolConfig,
+  type McpSelections,
+} from './merge-tool-config';
 import type { ApiAgent } from './agents-list';
-
-// ------------------------------------------------------------------ //
-//  Provider data                                                      //
-// ------------------------------------------------------------------ //
-
-interface ProviderInfo {
-  name: string;
-  displayName: string;
-  defaultModel: string;
-  models: string[];
-}
-
-function useProviders() {
-  const [providers, setProviders] = useState<ProviderInfo[]>([]);
-
-  useEffect(() => {
-    void authFetch<{ data: ProviderInfo[] }>('/api/v1/agents/providers')
-      .then((res) => {
-        setProviders(Array.isArray(res.data) ? res.data : []);
-      })
-      .catch(() => {});
-  }, []);
-
-  return providers;
-}
-
-// ------------------------------------------------------------------ //
-//  Provider + Model selects (linked)                                  //
-// ------------------------------------------------------------------ //
-
-function ProviderModelFields({
-  providers,
-  defaultProvider,
-  defaultModel,
-  idPrefix,
-}: {
-  providers: ProviderInfo[];
-  defaultProvider?: string;
-  defaultModel?: string;
-  idPrefix: string;
-}) {
-  const { t } = useLanguage();
-  const [selectedProvider, setSelectedProvider] = useState(
-    defaultProvider ?? providers[0]?.name ?? '',
-  );
-  const [dynamicModels, setDynamicModels] = useState<string[]>([]);
-  const [loadingModels, setLoadingModels] = useState(false);
-  const currentProvider = providers.find((p) => p.name === selectedProvider);
-
-  // Set default provider when providers load
-  useEffect(() => {
-    if (!selectedProvider && providers.length > 0) {
-      setSelectedProvider(defaultProvider ?? providers[0]!.name);
-    }
-  }, [providers, defaultProvider, selectedProvider]);
-
-  // Fetch available models from the provider API when provider changes
-  useEffect(() => {
-    if (!selectedProvider) return;
-    setLoadingModels(true);
-    setDynamicModels([]);
-    authFetch<{ data: string[] }>(`/api/v1/agents/providers/${selectedProvider}/models`)
-      .then((res) => setDynamicModels(Array.isArray(res.data) ? res.data : []))
-      .catch(() => setDynamicModels(currentProvider?.models ?? []))
-      .finally(() => setLoadingModels(false));
-  }, [selectedProvider]);
-
-  const models = dynamicModels.length > 0 ? dynamicModels : (currentProvider?.models ?? []);
-
-  return (
-    <>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={`${idPrefix}-provider`}>{t('agentDialogs.providerLabel')}</Label>
-        <select
-          name="provider"
-          id={`${idPrefix}-provider`}
-          className="rounded-md border bg-background px-3 py-2 text-sm"
-          value={selectedProvider}
-          onChange={(e) => {
-            setSelectedProvider(e.target.value);
-          }}
-        >
-          {providers.map((p) => (
-            <option key={p.name} value={p.name}>
-              {p.displayName}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={`${idPrefix}-model`}>
-          {t('agentDialogs.modelLabel')}
-          {loadingModels && <Loader2 className="ml-2 inline size-3 animate-spin text-muted-foreground" />}
-        </Label>
-        <Input
-          id={`${idPrefix}-model`}
-          name="model"
-          list={`${idPrefix}-model-suggestions`}
-          placeholder={loadingModels ? t('agentDialogs.modelLoadingPlaceholder') : (currentProvider?.defaultModel || 'model-name')}
-          defaultValue={defaultModel ?? currentProvider?.defaultModel ?? ''}
-          required
-        />
-        {models.length > 0 && (
-          <datalist id={`${idPrefix}-model-suggestions`}>
-            {models.map((m) => (
-              <option key={m} value={m} />
-            ))}
-          </datalist>
-        )}
-        <p className="text-xs text-muted-foreground">
-          {loadingModels
-            ? t('agentDialogs.modelFetchingHelp')
-            : t('agentDialogs.modelSelectHelp')}
-        </p>
-      </div>
-    </>
-  );
-}
 
 // ------------------------------------------------------------------ //
 //  Create Agent Dialog                                                //
@@ -152,17 +40,17 @@ export function CreateAgentDialog({
   saving: boolean;
   onSubmit: (form: FormData) => void;
 }) {
-  const { t } = useLanguage();
   const providers = useProviders();
   const [streamingEnabled, setStreamingEnabled] = useState(false);
+  const [errors, setErrors] = useState<FieldErrors>({});
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t('agentDialogs.createTitle')}</DialogTitle>
+          <DialogTitle>Create Agent</DialogTitle>
           <DialogDescription>
-            {t('agentDialogs.createDescription')}
+            Define a new AI agent with its model, prompt, and skills.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -170,78 +58,103 @@ export function CreateAgentDialog({
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             fd.set('streamingEnabled', String(streamingEnabled));
+            const parsed = parseForm(agentFormSchema, agentFormInput(fd));
+            if (!parsed.success) {
+              setErrors(parsed.fieldErrors);
+              return;
+            }
+            setErrors({});
             onSubmit(fd);
           }}
           className="flex flex-col gap-4"
+          noValidate
         >
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-name">{t('agentDialogs.nameLabel')}</Label>
-            <Input id="create-name" name="name" placeholder={t('agentDialogs.namePlaceholder')} required />
+            <Label htmlFor="create-name">Name</Label>
+            <Input
+              id="create-name"
+              name="name"
+              placeholder="Research Assistant"
+              maxLength={100}
+              aria-invalid={errors['name'] ? true : undefined}
+              required
+            />
+            <FieldError message={errors['name']} />
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-description">{t('agentDialogs.descriptionLabel')}</Label>
+            <Label htmlFor="create-description">Description</Label>
             <textarea
               id="create-description"
               name="description"
               rows={2}
+              maxLength={500}
               className="rounded-md border bg-background px-3 py-2 text-sm"
-              placeholder={t('agentDialogs.descriptionPlaceholder')}
+              placeholder="Optional description of this agent"
             />
+            <FieldError message={errors['description']} />
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-systemPrompt">{t('agentDialogs.systemPromptLabel')}</Label>
+            <Label htmlFor="create-systemPrompt">System Prompt</Label>
             <textarea
               id="create-systemPrompt"
               name="systemPrompt"
               rows={6}
               className="rounded-md border bg-background px-3 py-2 text-sm"
-              placeholder={t('agentDialogs.systemPromptPlaceholder')}
+              placeholder="You are a helpful AI assistant..."
+              aria-invalid={errors['systemPrompt'] ? true : undefined}
               required
             />
+            <FieldError message={errors['systemPrompt']} />
           </div>
 
           {/* Role is always worker for user-created agents; primary is system-only */}
           <input type="hidden" name="role" value="worker" />
 
-          <ProviderModelFields providers={providers} idPrefix="create" />
+          <ProviderModelFields providers={providers} idPrefix="create" errors={errors} />
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-apiBaseUrl">{t('agentDialogs.apiBaseUrlLabel')}</Label>
+            <Label htmlFor="create-apiBaseUrl">API Base URL</Label>
             <Input
               id="create-apiBaseUrl"
               name="apiBaseUrl"
+              type="url"
               placeholder="https://api.example.com/v1"
+              aria-invalid={errors['apiBaseUrl'] ? true : undefined}
             />
+            <FieldError message={errors['apiBaseUrl']} />
             <p className="text-xs text-muted-foreground">
-              {t('agentDialogs.apiBaseUrlHelp')}
+              Optional. Override the default API endpoint for this provider.
             </p>
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-maxTokensPerRun">{t('agentDialogs.maxTokensLabel')}</Label>
+            <Label htmlFor="create-maxTokensPerRun">Max Tokens per Run</Label>
             <Input
               id="create-maxTokensPerRun"
               name="maxTokensPerRun"
               type="number"
               defaultValue={100000}
               min={1000}
+              aria-invalid={errors['maxTokensPerRun'] ? true : undefined}
             />
+            <FieldError message={errors['maxTokensPerRun']} />
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="create-skillIds">{t('agentDialogs.skillIdsLabel')}</Label>
-            <Input id="create-skillIds" name="skillIds" placeholder={t('agentDialogs.skillIdsPlaceholder')} />
+            <Label htmlFor="create-skillIds">Skill IDs</Label>
+            <Input id="create-skillIds" name="skillIds" placeholder="Comma-separated skill IDs" />
           </div>
 
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label htmlFor="create-streamingEnabled" className="text-base">
-                {t('agentDialogs.streamingLabel')}
+                Streaming
               </Label>
               <p className="text-sm text-muted-foreground">
-                {t('agentDialogs.streamingHelp')}
+                Send each reasoning step as a separate message. When off, the user receives one
+                combined reply at the end of the run.
               </p>
             </div>
             <Switch
@@ -259,11 +172,11 @@ export function CreateAgentDialog({
                 onOpenChange(false);
               }}
             >
-              {t('agentDialogs.cancel')}
+              Cancel
             </Button>
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-              {t('agentDialogs.createSubmit')}
+              Create Agent
             </Button>
           </DialogFooter>
         </form>
@@ -287,9 +200,16 @@ export function EditAgentDialog({
   saving: boolean;
   onSubmit: (id: string, form: FormData) => void;
 }) {
-  const { t } = useLanguage();
   const providers = useProviders();
   const [streamingEnabled, setStreamingEnabled] = useState(agent?.streamingEnabled ?? false);
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const savedBindings = bindingsFromToolConfig(agent?.toolConfig);
+  const [mcpSelections, setMcpSelections] = useState<McpSelections>(savedBindings);
+
+  // Reset MCP selections when a different agent is opened
+  useEffect(() => {
+    setMcpSelections(bindingsFromToolConfig(agent?.toolConfig));
+  }, [agent?.id]); // intentionally omit agent?.toolConfig — reset only when a different agent opens
 
   if (!agent) return null;
 
@@ -297,53 +217,74 @@ export function EditAgentDialog({
     <Dialog open={agent !== null} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t('agentDialogs.editTitle')}</DialogTitle>
-          <DialogDescription>{t('agentDialogs.editDescription', { name: agent.name })}</DialogDescription>
+          <DialogTitle>Edit Agent</DialogTitle>
+          <DialogDescription>Update settings for {agent.name}.</DialogDescription>
         </DialogHeader>
         <form
           onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             fd.set('streamingEnabled', String(streamingEnabled));
+            fd.set(
+              'toolConfig',
+              JSON.stringify(mergeMcpIntoToolConfig(agent.toolConfig, mcpSelections)),
+            );
+            const parsed = parseForm(agentFormSchema, agentFormInput(fd));
+            if (!parsed.success) {
+              setErrors(parsed.fieldErrors);
+              return;
+            }
+            setErrors({});
             onSubmit(agent.id, fd);
           }}
           className="flex flex-col gap-4"
+          noValidate
         >
           <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-name">{t('agentDialogs.nameLabel')}</Label>
-            <Input id="edit-name" name="name" defaultValue={agent.name} required />
+            <Label htmlFor="edit-name">Name</Label>
+            <Input
+              id="edit-name"
+              name="name"
+              defaultValue={agent.name}
+              maxLength={100}
+              aria-invalid={errors['name'] ? true : undefined}
+              required
+            />
+            <FieldError message={errors['name']} />
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-description">{t('agentDialogs.descriptionLabel')}</Label>
+            <Label htmlFor="edit-description">Description</Label>
             <textarea
               id="edit-description"
               name="description"
               rows={2}
+              maxLength={500}
               className="rounded-md border bg-background px-3 py-2 text-sm"
               defaultValue={agent.description}
             />
+            <FieldError message={errors['description']} />
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-systemPrompt">{t('agentDialogs.systemPromptLabel')}</Label>
+            <Label htmlFor="edit-systemPrompt">System Prompt</Label>
             <textarea
               id="edit-systemPrompt"
               name="systemPrompt"
               rows={6}
               className="rounded-md border bg-background px-3 py-2 text-sm"
               defaultValue={agent.systemPrompt}
+              aria-invalid={errors['systemPrompt'] ? true : undefined}
               required
             />
+            <FieldError message={errors['systemPrompt']} />
           </div>
 
           {/* Role cannot be changed; primary is system-only, workers stay workers */}
           <div className="flex flex-col gap-2">
-            <Label>{t('agentDialogs.roleLabel')}</Label>
+            <Label>Role</Label>
             <p className="text-sm text-muted-foreground">
-              {agent.role === 'primary'
-                ? t('agentDialogs.rolePrimary')
-                : t('agentDialogs.roleWorker')}
+              {agent.role === 'primary' ? 'Primary (system)' : 'Worker (Sub-Agent)'}
             </p>
             <input type="hidden" name="role" value={agent.role} />
           </div>
@@ -353,43 +294,49 @@ export function EditAgentDialog({
             defaultProvider={agent.provider}
             defaultModel={agent.model}
             idPrefix="edit"
+            errors={errors}
           />
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-apiBaseUrl">{t('agentDialogs.apiBaseUrlLabel')}</Label>
+            <Label htmlFor="edit-apiBaseUrl">API Base URL</Label>
             <Input
               id="edit-apiBaseUrl"
               name="apiBaseUrl"
+              type="url"
               defaultValue={agent.apiBaseUrl ?? ''}
               placeholder="https://api.example.com/v1"
+              aria-invalid={errors['apiBaseUrl'] ? true : undefined}
             />
+            <FieldError message={errors['apiBaseUrl']} />
             <p className="text-xs text-muted-foreground">
-              {t('agentDialogs.apiBaseUrlHelp')}
+              Optional. Override the default API endpoint for this provider.
             </p>
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-maxTokensPerRun">{t('agentDialogs.maxTokensLabel')}</Label>
+            <Label htmlFor="edit-maxTokensPerRun">Max Tokens per Run</Label>
             <Input
               id="edit-maxTokensPerRun"
               name="maxTokensPerRun"
               type="number"
               defaultValue={agent.maxTokensPerRun ?? 100000}
               min={1000}
+              aria-invalid={errors['maxTokensPerRun'] ? true : undefined}
             />
+            <FieldError message={errors['maxTokensPerRun']} />
           </div>
 
           {agent.role !== 'primary' && (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="edit-isActive">{t('agentDialogs.statusLabel')}</Label>
+              <Label htmlFor="edit-isActive">Status</Label>
               <select
                 name="isActive"
                 id="edit-isActive"
                 className="rounded-md border bg-background px-3 py-2 text-sm"
                 defaultValue={agent.isActive ? 'true' : 'false'}
               >
-                <option value="true">{t('agentDialogs.statusActive')}</option>
-                <option value="false">{t('agentDialogs.statusInactive')}</option>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
               </select>
             </div>
           )}
@@ -397,10 +344,11 @@ export function EditAgentDialog({
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label htmlFor="edit-streamingEnabled" className="text-base">
-                {t('agentDialogs.streamingLabel')}
+                Streaming
               </Label>
               <p className="text-sm text-muted-foreground">
-                {t('agentDialogs.streamingHelp')}
+                Send each reasoning step as a separate message. When off, the user receives one
+                combined reply at the end of the run.
               </p>
             </div>
             <Switch
@@ -410,6 +358,12 @@ export function EditAgentDialog({
             />
           </div>
 
+          <AgentMcpTools
+            saved={savedBindings}
+            selections={mcpSelections}
+            onChange={setMcpSelections}
+          />
+
           <DialogFooter>
             <Button
               type="button"
@@ -418,11 +372,11 @@ export function EditAgentDialog({
                 onOpenChange(false);
               }}
             >
-              {t('agentDialogs.cancel')}
+              Cancel
             </Button>
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-              {t('agentDialogs.editSubmit')}
+              Save
             </Button>
           </DialogFooter>
         </form>

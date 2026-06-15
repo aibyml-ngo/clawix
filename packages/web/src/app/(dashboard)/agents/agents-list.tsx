@@ -22,9 +22,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { authFetch } from '@/lib/auth';
+import { formString } from '@/lib/form';
 import { useAnimeOnMount, staggerFadeUp, STAGGER } from '@/lib/anime';
 import { SuccessDialog } from '@/components/ui/success-dialog';
-import { useLanguage } from '@/i18n';
+import { DataPagination, type PaginationMeta } from '@/components/ui/data-pagination';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { CreateAgentDialog, EditAgentDialog } from './agents-dialogs';
 
 // ------------------------------------------------------------------ //
@@ -43,6 +45,7 @@ export interface ApiAgent {
   skillIds: string[];
   maxTokensPerRun: number;
   containerConfig: Record<string, unknown>;
+  toolConfig?: Record<string, unknown>;
   isActive: boolean;
   streamingEnabled: boolean;
   isOfficial: boolean;
@@ -53,7 +56,7 @@ export interface ApiAgent {
 
 interface PaginatedAgents {
   data: ApiAgent[];
-  meta: { total: number; page: number; limit: number; totalPages: number };
+  meta: PaginationMeta;
 }
 
 // ------------------------------------------------------------------ //
@@ -74,10 +77,11 @@ function parseSorts(param: string | null): SortEntry[] {
   return param
     .split(',')
     .map((s) => {
-      const [key, dir] = s.split(':') as [string, string];
-      return { key: key as SortKey, dir: (dir === 'desc' ? 'desc' : 'asc') as SortDir };
+      const [key = '', dir] = s.split(':');
+      const direction: SortDir = dir === 'desc' ? 'desc' : 'asc';
+      return { key, dir: direction };
     })
-    .filter((s) => VALID_KEYS.includes(s.key));
+    .filter((s): s is SortEntry => (VALID_KEYS as string[]).includes(s.key));
 }
 
 function serializeSorts(sorts: SortEntry[]): string {
@@ -89,10 +93,16 @@ function serializeSorts(sorts: SortEntry[]): string {
 // ------------------------------------------------------------------ //
 
 export function AgentsList() {
-  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { page, limit, setPage, setLimit } = usePaginationParams();
   const [agents, setAgents] = useState<ApiAgent[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta>({
+    total: 0,
+    page: 1,
+    limit,
+    totalPages: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -165,14 +175,15 @@ export function AgentsList() {
     setLoading(true);
     setError('');
     try {
-      const res = await authFetch<PaginatedAgents>('/api/v1/agents?limit=100');
+      const res = await authFetch<PaginatedAgents>(`/api/v1/agents?page=${page}&limit=${limit}`);
       setAgents(Array.isArray(res.data) ? res.data : []);
+      setMeta(res.meta);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('agentsList.loadError'));
+      setError(err instanceof Error ? err.message : 'Failed to load agents');
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [page, limit]);
 
   useEffect(() => {
     void fetchAgents();
@@ -192,20 +203,19 @@ export function AgentsList() {
           provider: form.get('provider'),
           model: form.get('model'),
           apiBaseUrl: form.get('apiBaseUrl') || undefined,
-          maxTokensPerRun: Number(form.get('maxTokensPerRun')) || 100000,
+          maxTokensPerRun: Number(formString(form, 'maxTokensPerRun')),
           streamingEnabled: form.get('streamingEnabled') === 'true',
-          skillIds:
-            (form.get('skillIds') as string)
-              ?.split(',')
-              .map((s) => s.trim())
-              .filter(Boolean) || [],
+          skillIds: formString(form, 'skillIds')
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean),
         }),
       });
       setCreateOpen(false);
       await fetchAgents();
-      setSuccessMessage(t('agentsList.created', { name: String(form.get('name') ?? '') }));
+      setSuccessMessage(`${form.get('name')} has been created.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('agentsList.createError'));
+      setError(err instanceof Error ? err.message : 'Failed to create agent');
     } finally {
       setSaving(false);
     }
@@ -225,19 +235,21 @@ export function AgentsList() {
           provider: form.get('provider'),
           model: form.get('model'),
           apiBaseUrl: form.get('apiBaseUrl') || undefined,
-          maxTokensPerRun: Number(form.get('maxTokensPerRun')) || 100000,
+          maxTokensPerRun: Number(formString(form, 'maxTokensPerRun')),
           streamingEnabled: form.get('streamingEnabled') === 'true',
-          skillIds:
-            (form.get('skillIds') as string)
-              ?.split(',')
-              .map((s) => s.trim())
-              .filter(Boolean) || [],
+          skillIds: formString(form, 'skillIds')
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean),
+          toolConfig: form.get('toolConfig')
+            ? (JSON.parse(formString(form, 'toolConfig')) as Record<string, unknown>)
+            : undefined,
         }),
       });
       setEditAgent(null);
       await fetchAgents();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('agentsList.updateError'));
+      setError(err instanceof Error ? err.message : 'Failed to update agent');
     } finally {
       setSaving(false);
     }
@@ -253,7 +265,7 @@ export function AgentsList() {
       });
       await fetchAgents();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('agentsList.updateError'));
+      setError(err instanceof Error ? err.message : 'Failed to update agent');
     } finally {
       setSaving(false);
     }
@@ -263,8 +275,10 @@ export function AgentsList() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('agentsList.title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('agentsList.subtitle')}</p>
+          <h1 className="text-2xl font-bold tracking-tight">Agent Definitions</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage AI agent definitions and monitor their runs.
+          </p>
         </div>
         <Button
           onClick={() => {
@@ -272,7 +286,7 @@ export function AgentsList() {
           }}
         >
           <Plus className="mr-2 size-4" />
-          {t('agentsList.createAgent')}
+          Create Agent
         </Button>
       </div>
 
@@ -288,7 +302,7 @@ export function AgentsList() {
         </div>
       ) : agents.length === 0 ? (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm p-8 text-center text-sm text-muted-foreground">
-          {t('agentsList.noAgents')}
+          No agents configured.
         </div>
       ) : (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm">
@@ -301,7 +315,7 @@ export function AgentsList() {
                     toggleSort('name');
                   }}
                 >
-                  {t('agentsList.colAgent')} {getSortIcon('name')}
+                  Agent {getSortIcon('name')}
                 </TableHead>
                 <TableHead
                   className="cursor-pointer select-none"
@@ -309,7 +323,7 @@ export function AgentsList() {
                     toggleSort('model');
                   }}
                 >
-                  {t('agentsList.colModel')} {getSortIcon('model')}
+                  Model {getSortIcon('model')}
                 </TableHead>
                 <TableHead
                   className="cursor-pointer select-none"
@@ -317,7 +331,7 @@ export function AgentsList() {
                     toggleSort('role');
                   }}
                 >
-                  {t('agentsList.colRole')} {getSortIcon('role')}
+                  Role {getSortIcon('role')}
                 </TableHead>
                 <TableHead
                   className="cursor-pointer select-none"
@@ -325,16 +339,16 @@ export function AgentsList() {
                     toggleSort('type');
                   }}
                 >
-                  {t('agentsList.colType')} {getSortIcon('type')}
+                  Type {getSortIcon('type')}
                 </TableHead>
-                <TableHead>{t('agentsList.colSkills')}</TableHead>
+                <TableHead>Skills</TableHead>
                 <TableHead
                   className="cursor-pointer select-none"
                   onClick={() => {
                     toggleSort('enabled');
                   }}
                 >
-                  {t('agentsList.colEnabled')} {getSortIcon('enabled')}
+                  Enabled {getSortIcon('enabled')}
                 </TableHead>
                 <TableHead className="w-[50px]" />
               </TableRow>
@@ -353,24 +367,22 @@ export function AgentsList() {
                   </TableCell>
                   <TableCell>
                     <Badge variant={agent.role === 'primary' ? 'default' : 'secondary'}>
-                      {agent.role === 'primary'
-                        ? t('agentsList.rolePrimary')
-                        : t('agentsList.roleWorker')}
+                      {agent.role}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     {agent.isOfficial ? (
-                      <Badge variant="outline">{t('agentsList.typePublic')}</Badge>
+                      <Badge variant="outline">Public</Badge>
                     ) : (
-                      <Badge variant="secondary">{t('agentsList.typePrivate')}</Badge>
+                      <Badge variant="secondary">Private</Badge>
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{t('agentsList.skillsCount', { n: agent.skillIds.length })}</Badge>
+                    <Badge variant="outline">{agent.skillIds.length} skills</Badge>
                   </TableCell>
                   <TableCell>
                     {agent.role === 'primary' ? (
-                      <span className="text-muted-foreground text-sm">{t('agentsList.alwaysOn')}</span>
+                      <span className="text-muted-foreground text-sm">Always on</span>
                     ) : (
                       <Switch
                         checked={agent.isActive}
@@ -394,10 +406,10 @@ export function AgentsList() {
                             setEditAgent(agent);
                           }}
                         >
-                          {t('agentsList.edit')}
+                          Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link href={`/agents/${agent.id}`}>{t('agentsList.viewRuns')}</Link>
+                          <Link href={`/agents/${agent.id}`}>View Runs</Link>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -408,6 +420,15 @@ export function AgentsList() {
           </Table>
         </div>
       )}
+
+      {!loading && agents.length > 0 ? (
+        <DataPagination
+          meta={meta}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+          label="agents"
+        />
+      ) : null}
 
       <CreateAgentDialog
         key={createOpen ? 'open' : 'closed'}
@@ -432,7 +453,7 @@ export function AgentsList() {
         onOpenChange={(open) => {
           if (!open) setSuccessMessage('');
         }}
-        title={t('agentsList.agentCreated')}
+        title="Agent Created"
         description={successMessage}
       />
     </div>

@@ -31,8 +31,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { authFetch } from '@/lib/auth';
-import { useLanguage } from '@/i18n';
 import { SuccessDialog } from '@/components/ui/success-dialog';
+import { DataPagination, type PaginationMeta } from '@/components/ui/data-pagination';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { CreatePolicyDialog, EditPolicyDialog } from './policies-dialogs';
 
 // ------------------------------------------------------------------ //
@@ -46,7 +47,6 @@ export interface ApiPolicy {
   maxTokenBudget: number | null;
   maxAgents: number;
   maxSkills: number;
-  maxMemoryItems: number;
   maxGroupsOwned: number;
   allowedProviders: string[];
   cronEnabled: boolean;
@@ -56,11 +56,12 @@ export interface ApiPolicy {
   features: Record<string, unknown>;
   isActive: boolean;
   createdAt: string;
+  allowMcp: boolean;
 }
 
 interface PaginatedPolicies {
   data: ApiPolicy[];
-  meta: { total: number; page: number; limit: number; totalPages: number };
+  meta: PaginationMeta;
 }
 
 interface ApiProvider {
@@ -72,8 +73,8 @@ interface ApiProvider {
 //  Helpers                                                            //
 // ------------------------------------------------------------------ //
 
-function formatBudget(cents: number | null, t: (key: string) => string): string {
-  if (cents === null) return t('settingsTabs.unlimited');
+function formatBudget(cents: number | null): string {
+  if (cents === null) return 'Unlimited';
   return `$${(cents / 100).toFixed(2)}/mo`;
 }
 
@@ -82,8 +83,14 @@ function formatBudget(cents: number | null, t: (key: string) => string): string 
 // ------------------------------------------------------------------ //
 
 export function PoliciesTab() {
-  const { t } = useLanguage();
+  const { page, limit, setPage, setLimit } = usePaginationParams();
   const [policies, setPolicies] = useState<ApiPolicy[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta>({
+    total: 0,
+    page: 1,
+    limit,
+    totalPages: 0,
+  });
   const [providerNames, setProviderNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -99,21 +106,22 @@ export function PoliciesTab() {
     setError('');
     try {
       const [policiesRes, providersRes] = await Promise.all([
-        authFetch<PaginatedPolicies>('/admin/policies?limit=100'),
+        authFetch<PaginatedPolicies>(`/admin/policies?page=${page}&limit=${limit}`),
         authFetch<ApiProvider[]>('/admin/providers'),
       ]);
       setPolicies(Array.isArray(policiesRes.data) ? policiesRes.data : []);
+      setMeta(policiesRes.meta);
       const nameMap: Record<string, string> = {};
       for (const p of providersRes ?? []) {
         nameMap[p.provider] = p.displayName;
       }
       setProviderNames(nameMap);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('settingsTabs.policiesLoadError'));
+      setError(err instanceof Error ? err.message : 'Failed to load policies');
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [page, limit]);
 
   useEffect(() => {
     void fetchData();
@@ -129,13 +137,9 @@ export function PoliciesTab() {
       });
       setCreateOpen(false);
       await fetchData();
-      setSuccessMessage(
-        t('settingsTabs.policyCreatedMessage', {
-          name: (data as { name?: string }).name ?? t('settingsTabs.policyFallbackName'),
-        }),
-      );
+      setSuccessMessage(`${(data as { name?: string }).name ?? 'Policy'} has been created.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('settingsTabs.policyCreateError'));
+      setError(err instanceof Error ? err.message : 'Failed to create policy');
     } finally {
       setSaving(false);
     }
@@ -151,7 +155,7 @@ export function PoliciesTab() {
       });
       await fetchData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('settingsTabs.policyUpdateError'));
+      setError(err instanceof Error ? err.message : 'Failed to update policy');
     } finally {
       setSaving(false);
     }
@@ -168,7 +172,7 @@ export function PoliciesTab() {
       setEditPolicy(null);
       await fetchData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('settingsTabs.policyUpdateError'));
+      setError(err instanceof Error ? err.message : 'Failed to update policy');
     } finally {
       setSaving(false);
     }
@@ -182,7 +186,7 @@ export function PoliciesTab() {
       setDeletePolicy(null);
       await fetchData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('settingsTabs.policyDeleteError'));
+      setError(err instanceof Error ? err.message : 'Failed to delete policy');
     } finally {
       setSaving(false);
     }
@@ -198,7 +202,7 @@ export function PoliciesTab() {
           }}
         >
           <Plus className="mr-1 size-4" />
-          {t('settingsTabs.createPolicy')}
+          Create Policy
         </Button>
       </div>
 
@@ -214,18 +218,18 @@ export function PoliciesTab() {
         </div>
       ) : policies.length === 0 ? (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm p-8 text-center text-sm text-muted-foreground">
-          {t('settingsTabs.policiesEmpty')}
+          No policies configured. Click &quot;Create Policy&quot; to get started.
         </div>
       ) : (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('settingsTabs.colPolicy')}</TableHead>
-                <TableHead>{t('settingsTabs.colTokenBudget')}</TableHead>
-                <TableHead>{t('settingsTabs.colAgents')}</TableHead>
-                <TableHead>{t('settingsTabs.colProviders')}</TableHead>
-                <TableHead>{t('settingsTabs.colActive')}</TableHead>
+                <TableHead>Policy</TableHead>
+                <TableHead>Token Budget</TableHead>
+                <TableHead>Agents</TableHead>
+                <TableHead>Providers</TableHead>
+                <TableHead>Active</TableHead>
                 <TableHead className="w-[50px]" />
               </TableRow>
             </TableHeader>
@@ -243,7 +247,7 @@ export function PoliciesTab() {
                   </TableCell>
                   <TableCell>
                     <code className="rounded bg-muted px-2 py-1 text-xs">
-                      {formatBudget(p.maxTokenBudget, t)}
+                      {formatBudget(p.maxTokenBudget)}
                     </code>
                   </TableCell>
                   <TableCell className="text-sm">{p.maxAgents}</TableCell>
@@ -260,9 +264,7 @@ export function PoliciesTab() {
                             </Badge>
                           ))
                         ) : (
-                          <span className="text-xs text-muted-foreground">
-                            {t('settingsTabs.providersNone')}
-                          </span>
+                          <span className="text-xs text-muted-foreground">None</span>
                         );
                       })()}
                     </div>
@@ -289,7 +291,7 @@ export function PoliciesTab() {
                             setEditPolicy(p);
                           }}
                         >
-                          {t('settingsTabs.edit')}
+                          Edit
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -298,7 +300,7 @@ export function PoliciesTab() {
                             setDeletePolicy(p);
                           }}
                         >
-                          {t('settingsTabs.delete')}
+                          Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -309,6 +311,17 @@ export function PoliciesTab() {
           </Table>
         </div>
       )}
+
+      {!loading && policies.length > 0 ? (
+        <div className="mt-4">
+          <DataPagination
+            meta={meta}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+            label="policies"
+          />
+        </div>
+      ) : null}
 
       <CreatePolicyDialog
         key={createOpen ? 'create-open' : 'create-closed'}
@@ -337,15 +350,14 @@ export function PoliciesTab() {
         {deletePolicy && (
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>{t('settingsTabs.deletePolicyTitle')}</AlertDialogTitle>
+              <AlertDialogTitle>Delete Policy</AlertDialogTitle>
               <AlertDialogDescription>
-                {t('settingsTabs.deletePolicyConfirmBefore')}
-                <strong>{deletePolicy.name}</strong>
-                {t('settingsTabs.deletePolicyConfirmAfter')}
+                Are you sure you want to delete <strong>{deletePolicy.name}</strong>? Users assigned
+                to this policy must be reassigned first.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>{t('settingsTabs.cancel')}</AlertDialogCancel>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={() => {
@@ -354,7 +366,7 @@ export function PoliciesTab() {
                 disabled={saving}
               >
                 {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-                {t('settingsTabs.delete')}
+                Delete
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -366,7 +378,7 @@ export function PoliciesTab() {
         onOpenChange={(open) => {
           if (!open) setSuccessMessage('');
         }}
-        title={t('settingsTabs.policyCreatedTitle')}
+        title="Policy Created"
         description={successMessage}
       />
     </>

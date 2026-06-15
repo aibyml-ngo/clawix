@@ -16,7 +16,6 @@ describe('PolicyRepository', () => {
     maxTokenBudget: 10000,
     maxAgents: 10,
     maxSkills: 20,
-    maxMemoryItems: 5000,
     maxGroupsOwned: 10,
     allowedProviders: ['anthropic', 'openai'],
     features: {},
@@ -127,6 +126,17 @@ describe('PolicyRepository', () => {
       expect(mockPrisma.policy.update).toHaveBeenCalledWith({
         where: { id: 'policy-1' },
         data: { maxAgents: 50 },
+      });
+    });
+
+    it('should persist allowMcp through the whitelist', async () => {
+      mockPrisma.policy.update.mockResolvedValue({ ...mockPolicy, allowMcp: true });
+
+      await repo.update('policy-1', { allowMcp: true });
+
+      expect(mockPrisma.policy.update).toHaveBeenCalledWith({
+        where: { id: 'policy-1' },
+        data: { allowMcp: true },
       });
     });
 

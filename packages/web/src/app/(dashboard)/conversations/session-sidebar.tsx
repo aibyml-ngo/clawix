@@ -1,14 +1,35 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Archive, ChevronRight, Loader2, MessageSquarePlus, Pencil, Search, X } from 'lucide-react';
+import {
+  Archive,
+  ChevronRight,
+  Loader2,
+  MessageSquarePlus,
+  Pencil,
+  Search,
+  Trash2,
+  X,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { authFetch } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import {
@@ -37,6 +58,7 @@ interface SessionSidebarProps {
   onNewChat: (archiveCurrent?: boolean) => void;
   onLoadMore?: () => void;
   onSessionUpdated?: () => void;
+  onDelete?: (id: string) => Promise<boolean>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -90,6 +112,7 @@ export function SessionSidebar({
   onNewChat,
   onLoadMore,
   onSessionUpdated,
+  onDelete,
 }: SessionSidebarProps) {
   const { t } = useLanguage();
   const [renameSession, setRenameSession] = useState<ChatSession | null>(null);
@@ -98,6 +121,19 @@ export function SessionSidebar({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmNewChat, setConfirmNewChat] = useState(false);
+  const [deleteCandidate, setDeleteCandidate] = useState<ChatSession | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteCandidate || !onDelete) return;
+    setDeleting(true);
+    const ok = await onDelete(deleteCandidate.id);
+    setDeleting(false);
+    if (ok) {
+      setDeleteCandidate(null);
+      onSessionUpdated?.();
+    }
+  };
 
   const handleNewChatClick = () => {
     // If there's an active session selected, ask for confirmation
@@ -201,8 +237,8 @@ export function SessionSidebar({
       });
       setRenameSession(null);
       onSessionUpdated?.();
-    } catch {
-      // Silently fail - user can retry
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to rename conversation');
     } finally {
       setSaving(false);
     }
@@ -303,6 +339,18 @@ export function SessionSidebar({
                           <Pencil className="mr-2 size-4" />
                           {t('conv.rename')}
                         </ContextMenuItem>
+                        {onDelete && (
+                          <>
+                            <ContextMenuSeparator />
+                            <ContextMenuItem
+                              variant="destructive"
+                              onClick={() => setDeleteCandidate(session)}
+                            >
+                              <Trash2 className="mr-2 size-4" />
+                              Delete
+                            </ContextMenuItem>
+                          </>
+                        )}
                       </ContextMenuContent>
                     </ContextMenu>
                   ))}
@@ -348,6 +396,40 @@ export function SessionSidebar({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={deleteCandidate !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeleteCandidate(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes “
+              {deleteCandidate?.topic ??
+                (deleteCandidate ? `Session — ${formatShortDate(deleteCandidate.createdAt)}` : '')}
+              ” and every message in it. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={(e) => {
+                e.preventDefault();
+                void handleDeleteConfirm();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* New Chat Confirmation Dialog */}
       <Dialog open={confirmNewChat} onOpenChange={setConfirmNewChat}>

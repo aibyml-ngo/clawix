@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, MoreHorizontal, Plus, Star, Zap } from 'lucide-react';
+import { Loader2, MoreHorizontal, Plus, Star, X, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -31,7 +31,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { authFetch } from '@/lib/auth';
-import { useLanguage } from '@/i18n';
 import { SuccessDialog } from '@/components/ui/success-dialog';
 import { CreateProviderDialog, EditProviderDialog } from './providers-dialogs';
 
@@ -56,7 +55,6 @@ export interface ApiProvider {
 // ------------------------------------------------------------------ //
 
 export function ProvidersTab() {
-  const { t } = useLanguage();
   const [providers, setProviders] = useState<ApiProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -74,11 +72,11 @@ export function ProvidersTab() {
       const res = await authFetch<ApiProvider[]>('/admin/providers');
       setProviders(Array.isArray(res) ? res : []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('settingsTabs.providersLoadError'));
+      setError(err instanceof Error ? err.message : 'Failed to load providers');
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     void fetchProviders();
@@ -95,14 +93,10 @@ export function ProvidersTab() {
       setCreateOpen(false);
       await fetchProviders();
       setSuccessMessage(
-        t('settingsTabs.providerAddedMessage', {
-          name:
-            (data as { displayName?: string }).displayName ??
-            t('settingsTabs.providerFallbackName'),
-        }),
+        `${(data as { displayName?: string }).displayName ?? 'Provider'} has been added.`,
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('settingsTabs.providerCreateError'));
+      setError(err instanceof Error ? err.message : 'Failed to create provider');
     } finally {
       setSaving(false);
     }
@@ -118,7 +112,7 @@ export function ProvidersTab() {
       });
       await fetchProviders();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('settingsTabs.providerUpdateError'));
+      setError(err instanceof Error ? err.message : 'Failed to update provider');
     } finally {
       setSaving(false);
     }
@@ -134,7 +128,7 @@ export function ProvidersTab() {
       });
       await fetchProviders();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('settingsTabs.providerSetDefaultError'));
+      setError(err instanceof Error ? err.message : 'Failed to set default provider');
     } finally {
       setSaving(false);
     }
@@ -151,7 +145,7 @@ export function ProvidersTab() {
       setEditProvider(null);
       await fetchProviders();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('settingsTabs.providerUpdateError'));
+      setError(err instanceof Error ? err.message : 'Failed to update provider');
     } finally {
       setSaving(false);
     }
@@ -165,7 +159,7 @@ export function ProvidersTab() {
       setDeleteProvider(null);
       await fetchProviders();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('settingsTabs.providerDeleteError'));
+      setError(err instanceof Error ? err.message : 'Failed to delete provider');
     } finally {
       setSaving(false);
     }
@@ -181,13 +175,26 @@ export function ProvidersTab() {
           }}
         >
           <Plus className="mr-1 size-4" />
-          {t('settingsTabs.addProvider')}
+          Add Provider
         </Button>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
+        <div
+          role="alert"
+          className="mb-4 flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          <span className="flex-1">{error}</span>
+          <button
+            type="button"
+            aria-label="Dismiss error"
+            className="-mr-1 -mt-0.5 rounded-sm p-1 text-destructive/80 hover:bg-destructive/10 hover:text-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50"
+            onClick={() => {
+              setError('');
+            }}
+          >
+            <X className="size-4" aria-hidden="true" />
+          </button>
         </div>
       )}
 
@@ -197,18 +204,18 @@ export function ProvidersTab() {
         </div>
       ) : providers.length === 0 ? (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm p-8 text-center text-sm text-muted-foreground">
-          {t('settingsTabs.providersEmpty')}
+          No providers configured. Click &quot;Add Provider&quot; to get started.
         </div>
       ) : (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('settingsTabs.colProvider')}</TableHead>
-                <TableHead>{t('settingsTabs.colApiKey')}</TableHead>
-                <TableHead>{t('settingsTabs.colBaseUrl')}</TableHead>
-                <TableHead>{t('settingsTabs.colDefault')}</TableHead>
-                <TableHead>{t('settingsTabs.colEnabled')}</TableHead>
+                <TableHead>Provider</TableHead>
+                <TableHead>API Key</TableHead>
+                <TableHead>Base URL</TableHead>
+                <TableHead>Default</TableHead>
+                <TableHead>Enabled</TableHead>
                 <TableHead className="w-[50px]" />
               </TableRow>
             </TableHeader>
@@ -231,13 +238,31 @@ export function ProvidersTab() {
                   <TableCell>
                     <Badge
                       variant={p.isDefault ? 'default' : 'outline'}
-                      className={`cursor-pointer gap-1 text-xs ${p.isDefault ? '' : 'opacity-40 hover:opacity-70'}`}
+                      role="button"
+                      tabIndex={p.isDefault ? -1 : 0}
+                      aria-label={
+                        p.isDefault
+                          ? `${p.displayName} is the default provider`
+                          : `Make ${p.displayName} default`
+                      }
+                      aria-pressed={p.isDefault}
+                      className={`cursor-pointer gap-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${p.isDefault ? '' : 'opacity-40 hover:opacity-70'}`}
                       onClick={() => {
                         if (!p.isDefault) void handleSetDefault(p);
                       }}
+                      onKeyDown={(e) => {
+                        if (p.isDefault) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          void handleSetDefault(p);
+                        }
+                      }}
                     >
-                      <Star className={`size-3 ${p.isDefault ? 'fill-current' : ''}`} />
-                      {t('settingsTabs.defaultBadge')}
+                      <Star
+                        className={`size-3 ${p.isDefault ? 'fill-current' : ''}`}
+                        aria-hidden="true"
+                      />
+                      Default
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -262,7 +287,7 @@ export function ProvidersTab() {
                             setEditProvider(p);
                           }}
                         >
-                          {t('settingsTabs.edit')}
+                          Edit
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -271,7 +296,7 @@ export function ProvidersTab() {
                             setDeleteProvider(p);
                           }}
                         >
-                          {t('settingsTabs.remove')}
+                          Remove
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -310,15 +335,14 @@ export function ProvidersTab() {
         {deleteProvider && (
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>{t('settingsTabs.removeProviderTitle')}</AlertDialogTitle>
+              <AlertDialogTitle>Remove Provider</AlertDialogTitle>
               <AlertDialogDescription>
-                {t('settingsTabs.removeProviderConfirmBefore')}
-                <strong>{deleteProvider.displayName}</strong> ({deleteProvider.provider})
-                {t('settingsTabs.removeProviderConfirmAfter')}
+                Are you sure you want to remove <strong>{deleteProvider.displayName}</strong> (
+                {deleteProvider.provider})? Agents using this provider will fail until reconfigured.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>{t('settingsTabs.cancel')}</AlertDialogCancel>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={() => {
@@ -327,7 +351,7 @@ export function ProvidersTab() {
                 disabled={saving}
               >
                 {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-                {t('settingsTabs.remove')}
+                Remove
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -339,7 +363,7 @@ export function ProvidersTab() {
         onOpenChange={(open) => {
           if (!open) setSuccessMessage('');
         }}
-        title={t('settingsTabs.providerAddedTitle')}
+        title="Provider Added"
         description={successMessage}
       />
     </>

@@ -29,8 +29,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { authFetch } from '@/lib/auth';
-import { useLanguage } from '@/i18n';
 import { SuccessDialog } from '@/components/ui/success-dialog';
+import { DataPagination, type PaginationMeta } from '@/components/ui/data-pagination';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { CreateGroupDialog, EditGroupDialog, MembersDialog } from './groups-dialogs';
 
 // ------------------------------------------------------------------ //
@@ -57,7 +58,7 @@ export interface ApiGroup {
 
 interface PaginatedGroups {
   data: ApiGroup[];
-  meta: { total: number; page: number; limit: number; totalPages: number };
+  meta: PaginationMeta;
 }
 
 // ------------------------------------------------------------------ //
@@ -79,8 +80,17 @@ function truncate(text: string | null, max: number): string {
 // ------------------------------------------------------------------ //
 
 export function GroupsTab() {
-  const { t } = useLanguage();
+  const { page, limit, setPage, setLimit } = usePaginationParams({
+    pageKey: 'groupsPage',
+    limitKey: 'groupsLimit',
+  });
   const [groups, setGroups] = useState<ApiGroup[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta>({
+    total: 0,
+    page: 1,
+    limit,
+    totalPages: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -95,14 +105,15 @@ export function GroupsTab() {
     setLoading(true);
     setError('');
     try {
-      const res = await authFetch<PaginatedGroups>('/admin/groups?limit=100');
+      const res = await authFetch<PaginatedGroups>(`/admin/groups?page=${page}&limit=${limit}`);
       setGroups(Array.isArray(res.data) ? res.data : []);
+      setMeta(res.meta);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('groups.errors.loadGroups'));
+      setError(err instanceof Error ? err.message : 'Failed to load groups');
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [page, limit]);
 
   useEffect(() => {
     void fetchGroups();
@@ -121,9 +132,9 @@ export function GroupsTab() {
       });
       setCreateOpen(false);
       await fetchGroups();
-      setSuccessMessage(t('groups.admin.createdMessage', { name: String(form.get('name') ?? '') }));
+      setSuccessMessage(`${form.get('name')} has been created.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('groups.errors.createGroup'));
+      setError(err instanceof Error ? err.message : 'Failed to create group');
     } finally {
       setSaving(false);
     }
@@ -143,7 +154,7 @@ export function GroupsTab() {
       setEditGroup(null);
       await fetchGroups();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('groups.errors.updateGroup'));
+      setError(err instanceof Error ? err.message : 'Failed to update group');
     } finally {
       setSaving(false);
     }
@@ -157,7 +168,7 @@ export function GroupsTab() {
       setDeleteGroup(null);
       await fetchGroups();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('groups.errors.deleteGroup'));
+      setError(err instanceof Error ? err.message : 'Failed to delete group');
     } finally {
       setSaving(false);
     }
@@ -166,7 +177,9 @@ export function GroupsTab() {
   return (
     <>
       <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{t('groups.admin.subtitle')}</p>
+        <p className="text-sm text-muted-foreground">
+          Manage user groups for memory sharing and access control.
+        </p>
         <Button
           size="sm"
           onClick={() => {
@@ -174,7 +187,7 @@ export function GroupsTab() {
           }}
         >
           <Plus className="mr-1 size-4" />
-          {t('groups.admin.addGroup')}
+          Add Group
         </Button>
       </div>
 
@@ -190,18 +203,18 @@ export function GroupsTab() {
         </div>
       ) : groups.length === 0 ? (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm p-8 text-center text-sm text-muted-foreground">
-          {t('groups.admin.empty')}
+          No groups found. Click &quot;Add Group&quot; to get started.
         </div>
       ) : (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('groups.admin.colGroup')}</TableHead>
-                <TableHead>{t('groups.admin.colDescription')}</TableHead>
-                <TableHead>{t('groups.admin.colMembers')}</TableHead>
-                <TableHead>{t('groups.admin.colOwner')}</TableHead>
-                <TableHead>{t('groups.admin.colCreated')}</TableHead>
+                <TableHead>Group</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Members</TableHead>
+                <TableHead>Owner</TableHead>
+                <TableHead>Created</TableHead>
                 <TableHead className="w-[50px]" />
               </TableRow>
             </TableHeader>
@@ -219,7 +232,7 @@ export function GroupsTab() {
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary">
-                      {t('groups.memberCount', { count: group._count.members })}
+                      {group._count.members} member{group._count.members !== 1 ? 's' : ''}
                     </Badge>
                   </TableCell>
                   <TableCell>{getOwnerName(group)}</TableCell>
@@ -239,14 +252,14 @@ export function GroupsTab() {
                             setEditGroup(group);
                           }}
                         >
-                          {t('groups.admin.edit')}
+                          Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onSelect={() => {
                             setMembersGroup(group);
                           }}
                         >
-                          {t('groups.admin.members')}
+                          Members
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
@@ -254,7 +267,7 @@ export function GroupsTab() {
                             setDeleteGroup(group);
                           }}
                         >
-                          {t('groups.admin.remove')}
+                          Remove
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -265,6 +278,17 @@ export function GroupsTab() {
           </Table>
         </div>
       )}
+
+      {!loading && groups.length > 0 ? (
+        <div className="mt-4">
+          <DataPagination
+            meta={meta}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+            label="groups"
+          />
+        </div>
+      ) : null}
 
       <CreateGroupDialog
         key={createOpen ? 'create-open' : 'create-closed'}
@@ -301,14 +325,14 @@ export function GroupsTab() {
         {deleteGroup && (
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>{t('groups.admin.removeTitle')}</AlertDialogTitle>
+              <AlertDialogTitle>Remove Group</AlertDialogTitle>
               <AlertDialogDescription>
-                {t('groups.admin.removeConfirmBefore')} <strong>{deleteGroup.name}</strong>
-                {t('groups.admin.removeConfirmAfter')}
+                Are you sure you want to remove <strong>{deleteGroup.name}</strong>? This will
+                remove the group and all its member associations.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>{t('groups.cancel')}</AlertDialogCancel>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={() => {
@@ -317,7 +341,7 @@ export function GroupsTab() {
                 disabled={saving}
               >
                 {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-                {t('groups.admin.remove')}
+                Remove
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -329,7 +353,7 @@ export function GroupsTab() {
         onOpenChange={(open) => {
           if (!open) setSuccessMessage('');
         }}
-        title={t('groups.admin.createdTitle')}
+        title="Group Created"
         description={successMessage}
       />
     </>

@@ -19,6 +19,7 @@ export type {
   InboundMessage,
   MessageHandler,
   OutboundMessage,
+  OutboundMessageMetadata,
 } from './channel.js';
 
 export type { CronSchedule, Task, TaskRun, TaskStatus } from './task.js';
@@ -29,9 +30,6 @@ export type {
   Group,
   GroupMember,
   GroupMemberRole,
-  MemoryItem,
-  MemoryScope,
-  MemoryShare,
   Notification,
   NotificationType,
   ShareTarget,

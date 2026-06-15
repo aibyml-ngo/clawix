@@ -16,7 +16,7 @@
  *  10. Resolve API key from env vars
  *  11. Create LLMProvider via createProvider — recovery is handled inside ReasoningLoop
  *  12. Start container
- *  13. Create ToolRegistry + registerBuiltinTools + register spawn tool
+ *  13. Create ToolRegistry + registerBuiltinTools + register spawn/cron/browser/python/MCP tools
  *  14. Create ReasoningLoop
  *  15. Run loop (with effectiveSignal so parent cancellations propagate)
  *  16. Save loop-generated messages (assistant + tool responses)
@@ -51,7 +51,6 @@ import { createLogger } from '@clawix/shared';
 import type { AgentDefinition as SharedAgentDefinition, ContainerConfig } from '@clawix/shared';
 
 import { PrismaService } from '../prisma/prisma.service.js';
-import { MemoryItemRepository } from '../db/memory-item.repository.js';
 import { SessionManagerService } from './session-manager.service.js';
 import { ContainerRunner } from './container-runner.js';
 import { ContainerPoolService } from './container-pool.service.js';
@@ -68,6 +67,7 @@ import { TaskRunMessageRepository } from '../db/task-run-message.repository.js';
 import type { RunOptions, RunResult } from './agent-runner.types.js';
 import { SessionMessageStore } from './message-store/session-message-store.js';
 import type { MessageStore } from './message-store/message-store.js';
+import { computeHiddenInHistory } from './history-visibility.js';
 import type { Session } from '../generated/prisma/client.js';
 import { ProviderConfigService } from '../provider-config/provider-config.service.js';
 import { createProvider } from './providers/provider-factory.js';
@@ -76,7 +76,7 @@ import { ReasoningLoop } from './reasoning-loop.js';
 import { CompressorService } from './compressor.js';
 import { BudgetTracker } from './budget-tracker.js';
 import { ToolRegistry } from './tool-registry.js';
-import { registerBuiltinTools, registerMemoryTools, registerCronTools } from './tools/index.js';
+import { registerBuiltinTools, registerCronTools } from './tools/index.js';
 import { createSpawnTool } from './tools/spawn.js';
 import { CronGuardService } from './cron-guard.service.js';
 import { ContextBuilderService } from './context-builder.service.js';
@@ -99,6 +99,22 @@ import { PythonConcurrencyLimiter } from './tools/python/concurrency-limiter.js'
 import { InstallMutex } from './tools/python/install-mutex.js';
 import { createPythonRunTool } from './tools/python/python-run.js';
 import { createPythonRunNetTool } from './tools/python/python-run-net.js';
+import { WikiPageRepository } from '../db/wiki-page.repository.js';
+import { WikiLinkRepository } from '../db/wiki-link.repository.js';
+import { WikiShareRepository } from '../db/wiki-share.repository.js';
+import { WikiSearchRepository } from '../db/wiki-search.repository.js';
+import { AuditLogRepository } from '../db/audit-log.repository.js';
+import { McpServerRepository, type McpServerForRun } from '../db/mcp-server.repository.js';
+import { NotificationRepository } from '../db/notification.repository.js';
+import { McpClientService } from '../mcp/mcp-client.service.js';
+import { McpTokenManager } from '../mcp/mcp-token-manager.service.js';
+import { McpRunConnections } from './tools/mcp/mcp-run-connections.js';
+import { registerMcpTools } from './tools/mcp/mcp-tool.factory.js';
+import { registerWikiTools } from './tools/wiki/register.js';
+import { registerSessionTools } from './tools/session/register.js';
+import { SessionSearchService } from './session-recall/session-search.service.js';
+import { mcpBindingsSchema, type McpBindings } from '@clawix/shared';
+import { bindingsFromTiers } from './tools/mcp/bindings-from-tiers.js';
 
 const logger = createLogger('engine:agent-runner');
 
@@ -141,7 +157,6 @@ export class AgentRunnerService {
     private readonly searchProviderRegistry: SearchProviderRegistry,
     private readonly moduleRef: ModuleRef,
     private readonly prisma: PrismaService,
-    private readonly memoryItemRepo: MemoryItemRepository,
     private readonly workspaceSeeder: WorkspaceSeederService,
     private readonly policyRepo: PolicyRepository,
     private readonly channelRepo: ChannelRepository,
@@ -160,6 +175,16 @@ export class AgentRunnerService {
     private readonly pythonProxyHealth: PythonProxyHealthService,
     private readonly pythonLimiter: PythonConcurrencyLimiter,
     private readonly pythonInstallMutex: InstallMutex,
+    private readonly wikiPageRepo: WikiPageRepository,
+    private readonly wikiLinkRepo: WikiLinkRepository,
+    private readonly wikiShareRepo: WikiShareRepository,
+    private readonly wikiSearchRepo: WikiSearchRepository,
+    private readonly auditLogRepo: AuditLogRepository,
+    private readonly sessionSearchService: SessionSearchService,
+    private readonly mcpServerRepo: McpServerRepository,
+    private readonly notificationRepo: NotificationRepository,
+    private readonly mcpClientService: McpClientService,
+    private readonly mcpTokenManager: McpTokenManager,
   ) {}
 
   /** Lazy accessor to break circular dependency with TaskExecutorService. */
@@ -290,6 +315,8 @@ export class AgentRunnerService {
     let containerId: string | null = null;
     // Pool is only meaningful when a session exists to key the warm container.
     const usePool = !isSubAgent && session !== null;
+    // Hoisted so the finally block can close any opened MCP connections.
+    let mcpConnections: McpRunConnections | undefined;
 
     try {
       // Step 7: Load message history (sub-agents start with a clean slate)
@@ -359,20 +386,13 @@ export class AgentRunnerService {
         await this.makeWorkspaceWritable(workspacePaths.localPath);
       }
 
-      // Seed bootstrap files (SOUL.md, USER.md) and MEMORY.md if they don't exist yet
+      // Seed bootstrap files (SOUL.md, USER.md) if they don't exist yet
       if (workspacePaths !== undefined) {
         const userForSeeding = await this.userRepo.findById(userId);
-
-        // Fetch existing non-daily memory items for seeding
-        const existingItems = await this.memoryItemRepo.findVisibleToUser(userId);
-        const nonDailyItems = existingItems.filter(
-          (item) => !item.tags.some((t) => t.startsWith('daily:')),
-        );
 
         await this.workspaceSeeder.seedWorkspace({
           workspacePath: workspacePaths.localPath,
           templateVars: { 'user.name': userForSeeding.name },
-          existingMemoryItems: nonDailyItems,
         });
       }
 
@@ -444,11 +464,32 @@ export class AgentRunnerService {
         });
       }
 
-      // Step 13: Create ToolRegistry, register builtin tools + web tools + memory tools + spawn tool
+      // Step 13: Create ToolRegistry, register builtin tools + web tools + memory/wiki tools + spawn tool
       const registry = new ToolRegistry();
       registerBuiltinTools(registry, containerId, this.containerRunner);
       registerWebTools(registry, this.searchProviderRegistry);
-      registerMemoryTools(registry, this.prisma, this.memoryItemRepo, userId);
+
+      // Memory toolset: wiki-backed tools.
+      const lintEnabled = (policy as { wikiLintEnabled?: boolean })?.wikiLintEnabled ?? true;
+      registerWikiTools(
+        registry,
+        {
+          prisma: this.prisma,
+          pages: this.wikiPageRepo,
+          links: this.wikiLinkRepo,
+          shares: this.wikiShareRepo,
+          search: this.wikiSearchRepo,
+          audit: this.auditLogRepo,
+          users: this.userRepo,
+          policies: this.policyRepo,
+        },
+        userId,
+        { lintEnabled },
+      );
+
+      // Session recall: search the user's own past conversations.
+      registerSessionTools(registry, { searchService: this.sessionSearchService }, userId);
+
       if (!isSubAgent && session) {
         registry.register(
           createSpawnTool(
@@ -459,6 +500,7 @@ export class AgentRunnerService {
             agentRun.id,
             userId,
             budgetTracker,
+            policy.maxSubAgentRunMs,
           ),
         );
       }
@@ -558,6 +600,49 @@ export class AgentRunnerService {
         );
       }
 
+      // Step 13d: Wire MCP tools (gated by policy.allowMcp + per-agent bindings).
+      // Registration is zero-network: wrappers come from the cached McpTool
+      // catalog + the caller's McpConnection; connections open lazily on the
+      // first actual call.
+      mcpConnections = new McpRunConnections(this.mcpClientService, undefined, {
+        tokenManager: this.mcpTokenManager,
+        userId,
+      });
+      if (policy.allowMcp) {
+        // Override: an explicit per-agent allowlist wins (TOFU, power users /
+        // narrow sub-agents). Empty/absent binding → auto path: every server
+        // the user has an active connection to contributes its `recommended`
+        // tier, so public agents get the user's curated tools with no Save.
+        const override = mcpBindingsSchema.safeParse(
+          ((agentDef.toolConfig ?? {}) as { mcp?: unknown }).mcp ?? {},
+        );
+
+        let mcpServers: readonly McpServerForRun[];
+        let bindings: McpBindings;
+        if (override.success && override.data.servers.length > 0) {
+          mcpServers = await this.mcpServerRepo.findServersForRun(
+            override.data.servers.map((b) => b.serverId),
+            userId,
+          );
+          bindings = override.data;
+        } else {
+          mcpServers = await this.mcpServerRepo.findEnabledServersForUser(userId);
+          bindings = bindingsFromTiers(mcpServers);
+        }
+
+        if (bindings.servers.length > 0) {
+          await registerMcpTools(registry, {
+            servers: mcpServers,
+            bindings,
+            connections: mcpConnections,
+            audit: this.auditLogRepo,
+            notifications: this.notificationRepo,
+            userId,
+            agentRunId: agentRun.id,
+          });
+        }
+      }
+
       // Step 14: Create ReasoningLoop
       const loop = new ReasoningLoop(provider, registry, this.compressor, {
         provider: agentDef.provider,
@@ -565,7 +650,9 @@ export class AgentRunnerService {
       });
 
       // Step 15: Run loop
-      // No default wall-clock timeout — let the model finish. The stale run reaper (10 min) is the safety net.
+      // Sub-agents always carry a policy-resolved timeout (supplied by the
+      // TaskExecutorService); primary runs have none by default and let the
+      // model finish, with the stale-run reaper (10 min) as their backstop.
       const timeoutMs = options.timeoutMs;
 
       // Wire the streaming event sink only for primary runs of agents that
@@ -618,7 +705,11 @@ export class AgentRunnerService {
       if (!isSubAgent) {
         const loopMessages = loopResult.messages.slice(initialMessages.length);
         if (loopMessages.length > 0) {
-          const savedIds = await store.saveMessages(loopMessages);
+          // Non-streamed runs only showed the user one combined final reply, so
+          // hide the intermediate reasoning steps from history to match. Streamed
+          // runs surfaced every step live, so all stay visible.
+          const hiddenInHistory = computeHiddenInHistory(loopMessages, streamingUsed);
+          const savedIds = await store.saveMessages(loopMessages, { hiddenInHistory });
           // Find the ID of the last assistant message for WebSocket delivery
           for (let i = loopMessages.length - 1; i >= 0; i--) {
             if (loopMessages[i]!.role === 'assistant') {
@@ -767,6 +858,9 @@ export class AgentRunnerService {
 
       throw err;
     } finally {
+      if (mcpConnections) {
+        await mcpConnections.closeAll().catch(() => undefined);
+      }
       if (!usePool && containerId !== null) {
         await this.containerRunner.stop(containerId);
       } else if (usePool) {

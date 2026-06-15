@@ -7,17 +7,18 @@ import { useAuth } from '@/components/auth-provider';
 import {
   BookOpen,
   Bot,
+  CalendarClock,
   ChevronRight,
   ChevronsUpDown,
   Coins,
-  Compass,
   CreditCard,
   FolderOpen,
-  Notebook,
   MonitorPlay,
   LogOut,
   MessageSquare,
   Moon,
+  Plug,
+  PlugZap,
   Radio,
   ScrollText,
   Settings2,
@@ -29,7 +30,6 @@ import {
 import { useTheme } from 'next-themes';
 import anime from 'animejs';
 import { EASING } from '@/lib/anime';
-import { useLanguage } from '@/i18n';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
@@ -55,40 +55,65 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useUnreadChat } from '@/components/dashboard/unread-chat-provider';
 
 const platformItems = [
-  { titleKey: 'nav.conversations', icon: MessageSquare, href: '/conversations' },
-  { titleKey: 'nav.explore', icon: Compass, href: '/explore' },
-  { titleKey: 'nav.workspace', icon: FolderOpen, href: '/workspace' },
-  { titleKey: 'nav.projector', icon: MonitorPlay, href: '/projector' },
-  { titleKey: 'nav.skills', icon: Wrench, href: '/skills' },
-  { titleKey: 'nav.agents', icon: Bot, href: '/agents' },
+  {
+    title: 'Conversations',
+    icon: MessageSquare,
+    href: '/conversations',
+  },
+  {
+    title: 'Workspace',
+    icon: FolderOpen,
+    href: '/workspace',
+  },
+  {
+    title: 'Projector',
+    icon: MonitorPlay,
+    href: '/projector',
+  },
+  {
+    title: 'Skills',
+    icon: Wrench,
+    href: '/skills',
+  },
+  {
+    title: 'Agents',
+    icon: Bot,
+    href: '/agents',
+  },
+  {
+    title: 'Schedules',
+    icon: CalendarClock,
+    href: '/tasks',
+  },
 ];
 
 interface NavItem {
-  readonly titleKey: string;
+  readonly title: string;
   readonly href: string;
   readonly icon: typeof BookOpen;
   readonly adminOnly?: boolean;
 }
 
 const communityItems: readonly NavItem[] = [
-  { titleKey: 'nav.groups', href: '/governance/groups', icon: Users },
-  { titleKey: 'nav.memory', href: '/memory', icon: Notebook },
+  { title: 'Groups', href: '/governance/groups', icon: Users },
 ];
 
 const governanceItems: readonly NavItem[] = [
-  { titleKey: 'nav.dashboard', href: '/dashboard', icon: BookOpen },
-  { titleKey: 'nav.tokenUsage', href: '/governance/tokens', icon: Coins },
-  { titleKey: 'nav.auditLogs', href: '/governance/audit', icon: ScrollText },
+  { title: 'Dashboard', href: '/dashboard', icon: BookOpen },
+  { title: 'Token Usage', href: '/governance/tokens', icon: Coins },
+  { title: 'Audit Logs', href: '/governance/audit', icon: ScrollText },
+  { title: 'MCP Governance', href: '/governance/mcp', icon: PlugZap, adminOnly: true },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { t } = useLanguage();
   const { resolvedTheme, setTheme } = useTheme();
+  const { count: unreadChat } = useUnreadChat();
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -150,7 +175,7 @@ export function AppSidebar() {
                 <div className="grid flex-1 text-left leading-tight">
                   <span className="truncate text-sm font-semibold tracking-tight">Clawix</span>
                   <span className="truncate font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                    {t('nav.enterpriseAi')}
+                    enterprise ai
                   </span>
                 </div>
               </Link>
@@ -162,68 +187,103 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
-            {t('nav.groupWorkspace')}
+            Workspace
           </SidebarGroupLabel>
           <SidebarMenu>
-            {platformItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={isActive(item.href)}
-                  tooltip={t(item.titleKey)}
-                  className={navButtonClass}
-                >
-                  <Link href={item.href}>
-                    <item.icon />
-                    <span>{t(item.titleKey)}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {platformItems.map((item) => {
+              const showUnreadDot = item.title === 'Conversations' && unreadChat > 0;
+              return (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.href)}
+                    tooltip={showUnreadDot ? `${item.title} (${unreadChat} unread)` : item.title}
+                    className={navButtonClass}
+                  >
+                    <Link href={item.href} className="relative">
+                      <item.icon />
+                      <span>{item.title}</span>
+                      {showUnreadDot && (
+                        <span
+                          aria-label={`${unreadChat} unread chat message${unreadChat === 1 ? '' : 's'}`}
+                          className="ml-auto inline-flex size-2 rounded-full bg-destructive shadow-[0_0_0_2px_hsl(var(--sidebar-background))]"
+                        />
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
           </SidebarMenu>
         </SidebarGroup>
 
         <SidebarGroup>
           <SidebarGroupLabel className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
-            {t('nav.groupCommunity')}
+            Community
           </SidebarGroupLabel>
           <SidebarMenu>
             {communityItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
+              <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
                   asChild
                   isActive={isActive(item.href)}
-                  tooltip={t(item.titleKey)}
+                  tooltip={item.title}
                   className={navButtonClass}
                 >
                   <Link href={item.href}>
                     <item.icon />
-                    <span>{t(item.titleKey)}</span>
+                    <span>{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={isActive('/wiki')}
+                tooltip="Wiki"
+                className={navButtonClass}
+              >
+                <Link href="/wiki">
+                  <BookOpen />
+                  <span>Wiki</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={isActive('/mcp-servers')}
+                tooltip="MCP Servers"
+                className={navButtonClass}
+              >
+                <Link href="/mcp-servers">
+                  <Plug />
+                  <span>MCP Servers</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
 
         <SidebarGroup>
           <SidebarGroupLabel className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
-            {t('nav.groupGovernance')}
+            Governance
           </SidebarGroupLabel>
           <SidebarMenu>
             {governanceItems
               .filter((item) => !item.adminOnly || user?.role === 'admin')
               .map((item) => (
-                <SidebarMenuItem key={item.href}>
+                <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
                     isActive={isActive(item.href)}
-                    tooltip={t(item.titleKey)}
+                    tooltip={item.title}
                     className={navButtonClass}
                   >
                     <Link href={item.href}>
                       <item.icon />
-                      <span>{t(item.titleKey)}</span>
+                      <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -247,23 +307,23 @@ export function AppSidebar() {
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton
                       isActive={pathname.startsWith('/settings')}
-                      tooltip={t('nav.settings')}
+                      tooltip="Settings"
                       className={navButtonClass}
                     >
                       <Settings2 />
-                      <span>{t('nav.settings')}</span>
+                      <span>Settings</span>
                       <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarMenuSub>
                       {[
-                        { titleKey: 'nav.users', href: '/settings/users', icon: Users },
-                        { titleKey: 'nav.policies', href: '/settings/policies', icon: CreditCard },
-                        { titleKey: 'nav.channels', href: '/settings/channels', icon: Radio },
-                        { titleKey: 'nav.providers', href: '/settings/providers', icon: Bot },
+                        { title: 'Users', href: '/settings/users', icon: Users },
+                        { title: 'Policies', href: '/settings/policies', icon: CreditCard },
+                        { title: 'Channels', href: '/settings/channels', icon: Radio },
+                        { title: 'Providers', href: '/settings/providers', icon: Bot },
                       ].map((item) => (
-                        <SidebarMenuSubItem key={item.href}>
+                        <SidebarMenuSubItem key={item.title}>
                           <SidebarMenuSubButton
                             asChild
                             isActive={isActive(item.href)}
@@ -271,7 +331,7 @@ export function AppSidebar() {
                           >
                             <Link href={item.href}>
                               <item.icon />
-                              <span>{t(item.titleKey)}</span>
+                              <span>{item.title}</span>
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
@@ -289,15 +349,15 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              aria-label={isDark ? t('nav.switchToLight') : t('nav.switchToDark')}
-              tooltip={isDark ? t('nav.lightMode') : t('nav.darkMode')}
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              tooltip={isDark ? 'Light mode' : 'Dark mode'}
               onClick={() => {
                 setTheme(isDark ? 'light' : 'dark');
               }}
             >
               <Sun className="size-4 rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute size-4 rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100" />
-              <span>{mounted ? (isDark ? t('nav.lightMode') : t('nav.darkMode')) : t('nav.toggleTheme')}</span>
+              <span>{mounted ? (isDark ? 'Light mode' : 'Dark mode') : 'Toggle theme'}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
@@ -331,7 +391,7 @@ export function AppSidebar() {
                   }}
                 >
                   <User className="mr-2 size-4" />
-                  {t('nav.profile')}
+                  Profile
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -342,7 +402,7 @@ export function AppSidebar() {
                   }}
                 >
                   <LogOut className="mr-2 size-4" />
-                  {t('nav.logout')}
+                  Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

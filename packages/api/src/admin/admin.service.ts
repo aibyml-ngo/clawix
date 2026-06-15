@@ -181,7 +181,6 @@ export class AdminService {
     readonly maxTokenBudget?: number | null;
     readonly maxAgents?: number;
     readonly maxSkills?: number;
-    readonly maxMemoryItems?: number;
     readonly maxGroupsOwned?: number;
     readonly allowedProviders?: string[];
     readonly features?: Record<string, unknown>;
@@ -200,7 +199,6 @@ export class AdminService {
       readonly maxTokenBudget?: number | null;
       readonly maxAgents?: number;
       readonly maxSkills?: number;
-      readonly maxMemoryItems?: number;
       readonly maxGroupsOwned?: number;
       readonly allowedProviders?: string[];
       readonly cronEnabled?: boolean;
@@ -209,6 +207,7 @@ export class AdminService {
       readonly maxTokensPerCronRun?: number | null;
       readonly features?: Record<string, unknown>;
       readonly isActive?: boolean;
+      readonly allowMcp?: boolean;
     },
   ): Promise<Policy> {
     return this.policyRepo.update(id, {

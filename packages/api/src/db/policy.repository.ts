@@ -12,7 +12,6 @@ interface CreatePolicyData {
   readonly maxTokenBudget?: number | null;
   readonly maxAgents?: number;
   readonly maxSkills?: number;
-  readonly maxMemoryItems?: number;
   readonly maxGroupsOwned?: number;
   readonly allowedProviders?: string[];
   readonly cronEnabled?: boolean;
@@ -20,6 +19,7 @@ interface CreatePolicyData {
   readonly minCronIntervalSecs?: number;
   readonly maxTokensPerCronRun?: number | null;
   readonly features?: Prisma.InputJsonValue;
+  readonly allowMcp?: boolean;
 }
 
 type UpdatePolicyData = Partial<CreatePolicyData> & {
@@ -76,7 +76,6 @@ export class PolicyRepository {
           ...(data.maxTokenBudget !== undefined ? { maxTokenBudget: data.maxTokenBudget } : {}),
           ...(data.maxAgents !== undefined ? { maxAgents: data.maxAgents } : {}),
           ...(data.maxSkills !== undefined ? { maxSkills: data.maxSkills } : {}),
-          ...(data.maxMemoryItems !== undefined ? { maxMemoryItems: data.maxMemoryItems } : {}),
           ...(data.maxGroupsOwned !== undefined ? { maxGroupsOwned: data.maxGroupsOwned } : {}),
           ...(data.allowedProviders !== undefined
             ? { allowedProviders: data.allowedProviders }
@@ -92,6 +91,7 @@ export class PolicyRepository {
             ? { maxTokensPerCronRun: data.maxTokensPerCronRun }
             : {}),
           ...(data.features !== undefined ? { features: data.features } : {}),
+          ...(data.allowMcp !== undefined ? { allowMcp: data.allowMcp } : {}),
         },
       });
     } catch (error: unknown) {
@@ -109,7 +109,6 @@ export class PolicyRepository {
           ...(data.maxTokenBudget !== undefined ? { maxTokenBudget: data.maxTokenBudget } : {}),
           ...(data.maxAgents !== undefined ? { maxAgents: data.maxAgents } : {}),
           ...(data.maxSkills !== undefined ? { maxSkills: data.maxSkills } : {}),
-          ...(data.maxMemoryItems !== undefined ? { maxMemoryItems: data.maxMemoryItems } : {}),
           ...(data.maxGroupsOwned !== undefined ? { maxGroupsOwned: data.maxGroupsOwned } : {}),
           ...(data.allowedProviders !== undefined
             ? { allowedProviders: data.allowedProviders }
@@ -126,6 +125,7 @@ export class PolicyRepository {
             : {}),
           ...(data.features !== undefined ? { features: data.features } : {}),
           ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
+          ...(data.allowMcp !== undefined ? { allowMcp: data.allowMcp } : {}),
         },
       });
     } catch (error: unknown) {

@@ -1,10 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Loader2, Search } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -16,7 +23,8 @@ import {
 import { authFetch } from '@/lib/auth';
 import { useAnimeOnMount, staggerFadeUp, STAGGER } from '@/lib/anime';
 import { useAuth } from '@/components/auth-provider';
-import { useLanguage } from '@/i18n';
+import { DataPagination, type PaginationMeta } from '@/components/ui/data-pagination';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
 
 interface AuditLogEntry {
   id: string;
@@ -32,7 +40,7 @@ interface AuditLogEntry {
 
 interface PaginatedAuditLogs {
   data: AuditLogEntry[];
-  meta: { total: number; page: number; limit: number; totalPages: number };
+  meta: PaginationMeta;
 }
 
 const actionColors: Record<string, string> = {
@@ -75,16 +83,18 @@ function formatDetails(details: Record<string, unknown>): string {
 }
 
 export default function AuditLogsPage() {
-  const { t } = useLanguage();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
+  const { page, limit, setPage, setLimit } = usePaginationParams();
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta>({
+    total: 0,
+    page: 1,
+    limit,
+    totalPages: 0,
+  });
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const limit = 20;
 
   // Filters
   const [actionFilter, setActionFilter] = useState('');
@@ -102,14 +112,23 @@ export default function AuditLogsPage() {
 
       const res = await authFetch<PaginatedAuditLogs>(`/api/v1/audit?${params.toString()}`);
       setLogs(Array.isArray(res.data) ? res.data : []);
-      setTotalPages(res.meta?.totalPages ?? 1);
-      setTotal(res.meta?.total ?? 0);
-    } catch {
+      setMeta(
+        res.meta ?? {
+          total: 0,
+          page: 1,
+          limit,
+          totalPages: 0,
+        },
+      );
+    } catch (e) {
       setLogs([]);
+      toast.error(e instanceof Error ? e.message : 'Failed to load audit logs', {
+        id: 'audit-fetch',
+      });
     } finally {
       setLoading(false);
     }
-  }, [page, actionFilter, resourceFilter]);
+  }, [page, limit, actionFilter, resourceFilter]);
 
   useEffect(() => {
     void fetchLogs();
@@ -162,14 +181,14 @@ export default function AuditLogsPage() {
     <div className="flex flex-col gap-6">
       <div className="border-b border-border/60 pb-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">{t('audit.title')}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Audit Logs</h1>
           <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground/70">
-            {t('audit.eyebrow')}
+            ledger
           </span>
         </div>
         <p className="text-sm text-muted-foreground">
-          {t('audit.intro')}
-          {!isAdmin && ` ${t('audit.introOwnOnly')}`}
+          Immutable record of all actions and events in your workspace.
+          {!isAdmin && ' Showing your actions only.'}
         </p>
       </div>
 
@@ -178,7 +197,7 @@ export default function AuditLogsPage() {
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder={t('audit.searchPlaceholder')}
+            placeholder="Search logs..."
             className="pl-9"
             value={searchQuery}
             onChange={(e) => {
@@ -186,37 +205,45 @@ export default function AuditLogsPage() {
             }}
           />
         </div>
-        <select
-          className="rounded-md border bg-background px-3 py-2 text-sm"
-          value={actionFilter}
-          onChange={(e) => {
-            setActionFilter(e.target.value);
+        <Select
+          value={actionFilter || 'all'}
+          onValueChange={(v) => {
+            setActionFilter(v === 'all' ? '' : v);
             setPage(1);
           }}
         >
-          <option value="">{t('audit.allActions')}</option>
-          {knownActions.map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
-          ))}
-        </select>
-        <select
-          className="rounded-md border bg-background px-3 py-2 text-sm"
-          value={resourceFilter}
-          onChange={(e) => {
-            setResourceFilter(e.target.value);
+          <SelectTrigger className="w-[180px]" aria-label="Filter by action">
+            <SelectValue placeholder="All Actions" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Actions</SelectItem>
+            {knownActions.map((a) => (
+              <SelectItem key={a} value={a}>
+                {a}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={resourceFilter || 'all'}
+          onValueChange={(v) => {
+            setResourceFilter(v === 'all' ? '' : v);
             setPage(1);
           }}
         >
-          <option value="">{t('audit.allResources')}</option>
-          {knownResources.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-        <span className="text-sm text-muted-foreground">{t('audit.totalEntries', { n: total })}</span>
+          <SelectTrigger className="w-[180px]" aria-label="Filter by resource">
+            <SelectValue placeholder="All Resources" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Resources</SelectItem>
+            {knownResources.map((r) => (
+              <SelectItem key={r} value={r}>
+                {r}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="text-sm text-muted-foreground">{meta.total} total entries</span>
       </div>
 
       {/* Logs table */}
@@ -226,18 +253,18 @@ export default function AuditLogsPage() {
         </div>
       ) : filteredLogs.length === 0 ? (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm p-8 text-center text-sm text-muted-foreground">
-          {t('audit.noEntries')}
+          No audit log entries found.
         </div>
       ) : (
         <div className="rounded-md border bg-background/30 backdrop-blur-sm">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[160px]">{t('audit.colTimestamp')}</TableHead>
-                <TableHead>{t('audit.colUser')}</TableHead>
-                <TableHead>{t('audit.colAction')}</TableHead>
-                <TableHead>{t('audit.colResource')}</TableHead>
-                <TableHead>{t('audit.colDetails')}</TableHead>
+                <TableHead className="w-[160px]">Timestamp</TableHead>
+                <TableHead>User</TableHead>
+                <TableHead>Action</TableHead>
+                <TableHead>Resource</TableHead>
+                <TableHead>Details</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody data-animate="audit-rows">
@@ -279,38 +306,14 @@ export default function AuditLogsPage() {
         </div>
       )}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
-            {t('audit.pageOf', { page, total: totalPages })}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => {
-                setPage((p) => p - 1);
-              }}
-            >
-              <ChevronLeft className="mr-1 size-4" />
-              {t('audit.previous')}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page >= totalPages}
-              onClick={() => {
-                setPage((p) => p + 1);
-              }}
-            >
-              {t('audit.next')}
-              <ChevronRight className="ml-1 size-4" />
-            </Button>
-          </div>
-        </div>
-      )}
+      {!loading && logs.length > 0 ? (
+        <DataPagination
+          meta={meta}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+          label="log entries"
+        />
+      ) : null}
     </div>
   );
 }

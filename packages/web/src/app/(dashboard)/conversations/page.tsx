@@ -1,11 +1,9 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { PanelLeftClose, PanelLeftOpen, Square } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { PanelLeftClose, PanelLeftOpen, Square, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authFetch } from '@/lib/auth';
-import { useLanguage } from '@/i18n';
 import { useChat } from './use-chat';
 import { ChatThread } from './chat-thread';
 import { ChatInput, EmptyState } from './chat-input';
@@ -14,20 +12,11 @@ import { SessionSidebar } from './session-sidebar';
 const SIDEBAR_STORAGE_KEY = 'conversations-sidebar-open';
 
 export default function ConversationsPage() {
-  return (
-    <Suspense>
-      <ConversationsInner />
-    </Suspense>
-  );
-}
-
-function ConversationsInner() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const { t } = useLanguage();
-
   // Initialize to false for SSR, then sync from localStorage after hydration
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Error banner dismissal — flipped back to false whenever the error string
+  // changes (i.e. a fresh error always re-displays).
+  const [errorDismissed, setErrorDismissed] = useState(false);
 
   // Sync sidebar state from localStorage after mount (avoids hydration mismatch)
   useEffect(() => {
@@ -60,6 +49,9 @@ function ConversationsInner() {
     hasMoreSessions,
     selectSession,
     sendMessage,
+    retryMessage,
+    deleteSession,
+    failedTmpIds,
     startNewChat,
     loadMore,
     loadMoreSessions,
@@ -67,16 +59,10 @@ function ConversationsInner() {
     toolProgressMode,
   } = useChat();
 
-  // Auto-send a prompt passed via ?prompt= query param (from Explore inspiration cards).
-  const promptSentRef = useRef(false);
+  // Reset banner dismissal whenever a fresh error string arrives so it re-displays.
   useEffect(() => {
-    if (promptSentRef.current) return;
-    const prompt = searchParams.get('prompt');
-    if (!prompt || !isConnected) return;
-    promptSentRef.current = true;
-    router.replace('/conversations');
-    sendMessage(decodeURIComponent(prompt));
-  }, [isConnected, searchParams, sendMessage, router]);
+    setErrorDismissed(false);
+  }, [error]);
 
   // Auto-select the latest active session when sessions load.
   // Only run when currentSessionId is EXPLICITLY null (not yet set) and there are
@@ -145,6 +131,7 @@ function ConversationsInner() {
           onNewChat={(archiveCurrent) => void startNewChat(archiveCurrent)}
           onLoadMore={() => void loadMoreSessions()}
           onSessionUpdated={() => void refreshSessions()}
+          onDelete={(id) => deleteSession(id)}
         />
       </div>
 
@@ -157,7 +144,7 @@ function ConversationsInner() {
             size="icon"
             className="size-8"
             onClick={handleSidebarToggle}
-            title={sidebarOpen ? t('conv.hideSessions') : t('conv.showSessions')}
+            title={sidebarOpen ? 'Hide sessions' : 'Show sessions'}
           >
             {sidebarOpen ? (
               <PanelLeftClose className="size-4" />
@@ -166,13 +153,26 @@ function ConversationsInner() {
             )}
           </Button>
           <span className="text-sm text-muted-foreground">
-            {currentSession?.topic ?? t('conv.title')}
-            {isArchived && <span className="ml-2 text-xs opacity-60">{t('conv.archivedTag')}</span>}
+            {currentSession?.topic ?? 'Conversations'}
+            {isArchived && <span className="ml-2 text-xs opacity-60">(Archived)</span>}
           </span>
         </div>
-        {error && (
-          <div className="mx-6 mt-4 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            {error}
+        {error && !errorDismissed && (
+          <div
+            role="alert"
+            className="mx-6 mt-4 flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          >
+            <span className="flex-1">{error}</span>
+            <button
+              type="button"
+              aria-label="Dismiss error"
+              className="-mr-1 -mt-0.5 rounded-sm p-1 text-destructive/80 hover:bg-destructive/10 hover:text-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50"
+              onClick={() => {
+                setErrorDismissed(true);
+              }}
+            >
+              <X className="size-4" aria-hidden="true" />
+            </button>
           </div>
         )}
 
@@ -186,6 +186,10 @@ function ConversationsInner() {
               hasMore={hasMore}
               onLoadMore={loadMore}
               toolProgressMode={toolProgressMode}
+              failedIds={failedTmpIds}
+              onRetry={(id) => {
+                retryMessage(id);
+              }}
             />
             {isTyping && (
               <div className="flex justify-center py-1">
@@ -198,13 +202,13 @@ function ConversationsInner() {
                   }}
                 >
                   <Square className="size-3" />
-                  {t('conv.stop')}
+                  Stop
                 </Button>
               </div>
             )}
             {isArchived ? (
               <div className="border-t px-6 py-4 text-center text-sm text-muted-foreground">
-                {t('conv.archivedReadOnly')}
+                This conversation is archived and read-only.
               </div>
             ) : (
               <ChatInput

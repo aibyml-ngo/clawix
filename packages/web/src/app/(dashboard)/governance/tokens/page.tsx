@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronRight, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import anime from 'animejs';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { EASING, DURATION } from '@/lib/anime';
@@ -11,7 +12,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useAuth } from '@/components/auth-provider';
 import { authFetch } from '@/lib/auth';
 import { cn } from '@/lib/utils';
-import { useLanguage } from '@/i18n';
 
 interface TokenSummary {
   budget: {
@@ -83,6 +83,16 @@ function formatCost(n: number): string {
   return `$${n.toFixed(2)}`;
 }
 
+/**
+ * Format a USD amount for the budget strip. Small amounts (< $1) keep
+ * sub-cent precision so accruing usage against a tiny budget (e.g. a $0.01
+ * cap) is still visible instead of rounding to $0.00.
+ */
+function formatUsd(n: number): string {
+  if (n !== 0 && Math.abs(n) < 1) return `$${n.toFixed(4)}`;
+  return `$${n.toFixed(2)}`;
+}
+
 function formatCompact(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
@@ -90,7 +100,6 @@ function formatCompact(n: number): string {
 }
 
 function UsageLineChart({ data, maxValue }: { data: DailyUsage[]; maxValue: number }) {
-  const { t } = useLanguage();
   const lineRef = useRef<SVGPathElement>(null);
   const areaRef = useRef<SVGPathElement>(null);
 
@@ -266,7 +275,7 @@ function UsageLineChart({ data, maxValue }: { data: DailyUsage[]; maxValue: numb
           className="fill-muted-foreground"
           fontSize={11}
         >
-          {t('tokens.chartYAxis')}
+          Tokens
         </text>
       </svg>
     </div>
@@ -294,7 +303,6 @@ function StatTile({
   fillPct?: number | null;
   tone?: 'primary' | 'positive' | 'critical' | 'neutral';
 }) {
-  const { t } = useLanguage();
   const stripe =
     tone === 'critical'
       ? 'border-l-red-500/70'
@@ -345,7 +353,7 @@ function StatTile({
           </div>
           {overflow ? (
             <span className="font-mono text-[10px] uppercase tracking-wider text-red-400">
-              {t('tokens.overBudget', { pct: fillPct?.toFixed(0) ?? '0' })}
+              over budget · {fillPct?.toFixed(0)}%
             </span>
           ) : null}
         </div>
@@ -355,12 +363,11 @@ function StatTile({
 }
 
 function ModelUsagePieChart({ data }: { data: ModelUsage[] }) {
-  const { t } = useLanguage();
   const total = data.reduce((acc, d) => acc + d.totalTokens, 0);
   if (data.length === 0 || total === 0) {
     return (
       <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">
-        {t('tokens.noModelUsage')}
+        No model usage this month yet.
       </div>
     );
   }
@@ -371,12 +378,12 @@ function ModelUsagePieChart({ data }: { data: ModelUsage[] }) {
         {/* Center label — total + unit, sits inside the donut hole */}
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground/70">
-            {t('tokens.donutTotal')}
+            Total
           </span>
           <span className="text-xl font-semibold tabular-nums tracking-tight">
             {formatCompact(total)}
           </span>
-          <span className="text-[10px] text-muted-foreground">{t('tokens.unitTokens')}</span>
+          <span className="text-[10px] text-muted-foreground">tokens</span>
         </div>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -411,11 +418,7 @@ function ModelUsagePieChart({ data }: { data: ModelUsage[] }) {
                 const pct = ((value / total) * 100).toFixed(1);
                 const item = payload?.payload as ModelUsage | undefined;
                 return [
-                  t('tokens.tooltipValue', {
-                    n: formatNumber(value),
-                    pct,
-                    cost: formatCost(item?.totalEstimatedCostUsd ?? 0),
-                  }),
+                  `${formatNumber(value)} tokens (${pct}%) · ${formatCost(item?.totalEstimatedCostUsd ?? 0)}`,
                   item?.model ?? '',
                 ];
               }}
@@ -446,7 +449,6 @@ function ModelUsagePieChart({ data }: { data: ModelUsage[] }) {
 }
 
 function UserBreakdownRow({ user }: { user: UserUsage }) {
-  const { t } = useLanguage();
   const [agents, setAgents] = useState<AgentUsage[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -455,8 +457,8 @@ function UserBreakdownRow({ user }: { user: UserUsage }) {
     try {
       const res = await authFetch<AgentUsage[]>(`/api/v1/tokens/per-user/${user.userId}/agents`);
       setAgents(Array.isArray(res) ? res : []);
-    } catch {
-      // silently fail — row just won't expand
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to load per-agent breakdown');
     }
     setLoaded(true);
   }, [user.userId, loaded]);
@@ -486,7 +488,7 @@ function UserBreakdownRow({ user }: { user: UserUsage }) {
       </CollapsibleTrigger>
       <CollapsibleContent>
         {agents.length === 0 && loaded ? (
-          <div className="px-10 py-3 text-sm text-muted-foreground">{t('tokens.noAgentUsage')}</div>
+          <div className="px-10 py-3 text-sm text-muted-foreground">No agent usage data.</div>
         ) : (
           <div className="bg-muted/30">
             {agents.map((agent) => (
@@ -518,7 +520,6 @@ function UserBreakdownRow({ user }: { user: UserUsage }) {
 }
 
 export default function TokenUsagePage() {
-  const { t } = useLanguage();
   const { user } = useAuth();
   const [period, setPeriod] = useState('daily');
   const [summary, setSummary] = useState<TokenSummary | null>(null);
@@ -543,8 +544,10 @@ export default function TokenUsagePage() {
       setUserBreakdown(Array.isArray(usersRes) ? usersRes : []);
       setChartData(Array.isArray(chartRes) ? chartRes : []);
       setModelUsage(Array.isArray(modelRes) ? modelRes : []);
-    } catch {
-      // Data will remain empty
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to load token usage data', {
+        id: 'tokens-fetch',
+      });
     } finally {
       setLoading(false);
     }
@@ -554,14 +557,16 @@ export default function TokenUsagePage() {
     void fetchData();
   }, [fetchData]);
 
-  const budgetTokens = summary?.budget.maxTokenBudget;
+  // The policy budget is denominated in USD (stored as cents on the policy,
+  // exposed here as `budgetUsd`). Enforcement compares accrued *cost*, not raw
+  // token count, against it — so the strip must be monetary end-to-end. The
+  // token count is still surfaced as a subtitle on "Cost Used".
+  const unlimited = summary?.budget.unlimited ?? false;
+  const budgetUsd = summary?.budget.budgetUsd ?? null;
+  const usedUsd = summary?.usage.totalEstimatedCostUsd ?? 0;
   const usedTokens = summary?.usage.totalTokens ?? 0;
-  const remainingTokens =
-    budgetTokens !== null && budgetTokens !== undefined ? budgetTokens - usedTokens : null;
-  const utilization = budgetTokens ? ((usedTokens / budgetTokens) * 100).toFixed(1) : null;
-
-  const utilPct =
-    budgetTokens != null && budgetTokens > 0 ? (usedTokens / budgetTokens) * 100 : null;
+  const remainingUsd = budgetUsd !== null && budgetUsd !== undefined ? budgetUsd - usedUsd : null;
+  const utilPct = budgetUsd != null && budgetUsd > 0 ? (usedUsd / budgetUsd) * 100 : null;
   const stats: {
     eyebrow: string;
     value: string;
@@ -570,28 +575,28 @@ export default function TokenUsagePage() {
     tone: 'primary' | 'positive' | 'critical' | 'neutral';
   }[] = [
     {
-      eyebrow: t('tokens.statMonthlyBudget'),
-      value: summary?.budget.unlimited ? '∞' : formatNumber(budgetTokens ?? 0),
-      unit: summary?.budget.unlimited ? t('tokens.unitUnlimited') : t('tokens.unitTokens'),
-      tone: summary?.budget.unlimited ? 'positive' : 'neutral',
+      eyebrow: 'Monthly Budget',
+      value: unlimited ? '∞' : formatUsd(budgetUsd ?? 0),
+      unit: unlimited ? 'unlimited' : 'USD / mo',
+      tone: unlimited ? 'positive' : 'neutral',
     },
     {
-      eyebrow: t('tokens.statUsed'),
-      value: formatNumber(usedTokens),
-      unit: t('tokens.unitTokens'),
+      eyebrow: 'Cost Used',
+      value: formatUsd(usedUsd),
+      unit: `${formatNumber(usedTokens)} tokens`,
       fillPct: utilPct,
       tone: utilPct != null && utilPct > 100 ? 'critical' : 'primary',
     },
     {
-      eyebrow: t('tokens.statRemaining'),
-      value: remainingTokens !== null ? formatNumber(remainingTokens) : t('tokens.na'),
-      unit: remainingTokens !== null ? t('tokens.unitTokens') : '',
-      tone: remainingTokens != null && remainingTokens < 0 ? 'critical' : 'positive',
+      eyebrow: 'Remaining',
+      value: unlimited ? '∞' : remainingUsd !== null ? formatUsd(remainingUsd) : 'N/A',
+      unit: unlimited ? 'unlimited' : remainingUsd !== null ? 'USD' : '',
+      tone: remainingUsd != null && remainingUsd < 0 ? 'critical' : 'positive',
     },
     {
-      eyebrow: t('tokens.statUtilization'),
-      value: utilization ? `${utilization}%` : t('tokens.na'),
-      unit: utilization ? t('tokens.unitOfBudget') : '',
+      eyebrow: 'Utilization',
+      value: utilPct != null ? `${utilPct.toFixed(1)}%` : 'N/A',
+      unit: utilPct != null ? 'of budget' : '',
       fillPct: utilPct,
       tone: utilPct != null && utilPct > 100 ? 'critical' : 'primary',
     },
@@ -605,12 +610,14 @@ export default function TokenUsagePage() {
       <div className="flex flex-col gap-6">
         <div className="border-b border-border/60 pb-4">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">{t('tokens.title')}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Token Usage</h1>
             <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground/70">
-              {t('tokens.eyebrow')}
+              consumption
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">{t('tokens.subtitle')}</p>
+          <p className="text-sm text-muted-foreground">
+            Monitor token consumption, costs, and budget utilization.
+          </p>
         </div>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -642,22 +649,22 @@ export default function TokenUsagePage() {
 
       <Tabs value={period} onValueChange={setPeriod}>
         <TabsList>
-          <TabsTrigger value="daily">{t('tokens.tabDaily')}</TabsTrigger>
-          <TabsTrigger value="weekly">{t('tokens.tabWeekly')}</TabsTrigger>
-          <TabsTrigger value="monthly">{t('tokens.tabMonthly')}</TabsTrigger>
+          <TabsTrigger value="daily">Daily</TabsTrigger>
+          <TabsTrigger value="weekly">Weekly</TabsTrigger>
+          <TabsTrigger value="monthly">Monthly</TabsTrigger>
         </TabsList>
 
         <TabsContent value={period} className="mt-4 flex flex-col gap-6">
           {/* Usage chart */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('tokens.usageOverTime')}</CardTitle>
-              <CardDescription>{t('tokens.usageOverTimeDesc')}</CardDescription>
+              <CardTitle>Usage Over Time</CardTitle>
+              <CardDescription>Token consumption trend for the current month.</CardDescription>
             </CardHeader>
             <CardContent>
               {chartData.length === 0 ? (
                 <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
-                  {t('tokens.noUsageData')}
+                  No usage data for this period.
                 </div>
               ) : (
                 <UsageLineChart data={chartData} maxValue={maxDaily} />
@@ -668,8 +675,10 @@ export default function TokenUsagePage() {
           {/* Per-model pie — caller's own usage */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('tokens.yourModels')}</CardTitle>
-              <CardDescription>{t('tokens.yourModelsDesc')}</CardDescription>
+              <CardTitle>Your Models This Month</CardTitle>
+              <CardDescription>
+                Token usage broken down by model across every agent you've used.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ModelUsagePieChart data={modelUsage} />
@@ -679,22 +688,24 @@ export default function TokenUsagePage() {
           {/* Per-user breakdown */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('tokens.perUser')}</CardTitle>
-              <CardDescription>{t('tokens.perUserDesc')}</CardDescription>
+              <CardTitle>Per-User Breakdown</CardTitle>
+              <CardDescription>
+                Token usage and cost by user. Click a row to see agent-level details.
+              </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               {/* Header */}
               <div className="flex items-center gap-2 border-b px-4 py-2 text-xs font-medium text-muted-foreground">
                 <span className="w-3.5" />
-                <span className="flex-1">{t('tokens.colUser')}</span>
-                <span className="w-24 text-right">{t('tokens.colInput')}</span>
-                <span className="w-24 text-right">{t('tokens.colOutput')}</span>
-                <span className="w-24 text-right">{t('tokens.colTotal')}</span>
-                <span className="w-20 text-right">{t('tokens.colEstCost')}</span>
+                <span className="flex-1">User</span>
+                <span className="w-24 text-right">Input</span>
+                <span className="w-24 text-right">Output</span>
+                <span className="w-24 text-right">Total</span>
+                <span className="w-20 text-right">Est. Cost</span>
               </div>
               {userBreakdown.length === 0 ? (
                 <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                  {t('tokens.noUsageData')}
+                  No usage data for this period.
                 </div>
               ) : (
                 userBreakdown.map((user) => <UserBreakdownRow key={user.userId} user={user} />)

@@ -120,7 +120,6 @@ async function main(): Promise<void> {
       maxTokenBudget: 1000,
       maxAgents: 2,
       maxSkills: 5,
-      maxMemoryItems: 100,
       maxGroupsOwned: 2,
       allowedProviders: [defaultProvider],
       cronEnabled: true,
@@ -138,7 +137,6 @@ async function main(): Promise<void> {
       maxTokenBudget: 10000,
       maxAgents: 10,
       maxSkills: 50,
-      maxMemoryItems: 5000,
       maxGroupsOwned: 10,
       allowedProviders: extendedProviders,
       cronEnabled: true,
@@ -156,7 +154,6 @@ async function main(): Promise<void> {
       maxTokenBudget: null,
       maxAgents: 100,
       maxSkills: 500,
-      maxMemoryItems: 50000,
       maxGroupsOwned: 50,
       allowedProviders: providerSeeds.map((s) => s.provider),
       cronEnabled: true,
@@ -244,6 +241,66 @@ async function main(): Promise<void> {
       },
     }));
   console.log(`[bootstrap]   Primary agent: ${primaryAgent.name}`);
+
+  // --- Named workers (coder, researcher) — created only if missing ---
+  // These mirror the dev `seed.ts` workers so that production deployments
+  // (which run bootstrap, not the seed) can spawn named sub-agents. Skills
+  // such as projector-creator spawn `agent_name="coder"`; without this row
+  // the named spawn fails and silently falls back to the anonymous
+  // default-worker (losing the worker's specialized system prompt).
+  const namedWorkers = [
+    {
+      name: 'coder',
+      description: 'Writes, reviews, and tests code — optimized for code generation',
+      systemPrompt:
+        'You are a skilled software engineer. Write clean, complete, functional code. Never use placeholders or TODO comments. Always verify your output is complete. Use the tools available to read, write, and execute code in the workspace.',
+      maxTokensPerRun: 100000,
+      containerConfig: {
+        image: process.env['AGENT_CONTAINER_IMAGE'] ?? 'clawix-agent:latest',
+        cpuLimit: '1',
+        memoryLimit: '512m',
+        timeoutSeconds: 300,
+        readOnlyRootfs: false,
+        allowedMounts: [],
+      },
+    },
+    {
+      name: 'researcher',
+      description: 'Searches the web and summarizes findings',
+      systemPrompt:
+        'You are a research specialist. Search the web for information, analyze sources, and provide clear, well-organized summaries with citations.',
+      maxTokensPerRun: 50000,
+      containerConfig: {
+        image: process.env['AGENT_CONTAINER_IMAGE'] ?? 'clawix-agent:latest',
+        cpuLimit: '0.5',
+        memoryLimit: '256m',
+        timeoutSeconds: 120,
+        readOnlyRootfs: true,
+        allowedMounts: [],
+      },
+    },
+  ];
+  for (const worker of namedWorkers) {
+    const existingWorker = await prisma.agentDefinition.findFirst({
+      where: { name: worker.name, role: 'worker' },
+    });
+    if (!existingWorker) {
+      await prisma.agentDefinition.create({
+        data: {
+          name: worker.name,
+          description: worker.description,
+          systemPrompt: worker.systemPrompt,
+          role: 'worker',
+          provider: defaultProvider,
+          model: defaultModel,
+          maxTokensPerRun: worker.maxTokensPerRun,
+          containerConfig: worker.containerConfig,
+          isActive: true,
+        },
+      });
+      console.log(`[bootstrap]   Worker seeded: ${worker.name}`);
+    }
+  }
 
   // --- Default worker (only if none exists) ---
   const existingDefaultWorker = await prisma.agentDefinition.findFirst({

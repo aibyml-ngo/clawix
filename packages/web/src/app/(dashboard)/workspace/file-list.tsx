@@ -37,7 +37,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { formatFileSize } from '@/lib/format';
-import { useLanguage } from '@/i18n';
 import type { FileEntry, FileType } from '@clawix/shared';
 
 interface FileListProps {
@@ -70,7 +69,7 @@ const FILE_ICONS: Record<FileType, typeof File> = {
   unknown: File,
 };
 
-function formatRelativeDate(isoDate: string, t: (key: string, params?: Record<string, string | number>) => string): string {
+function formatRelativeDate(isoDate: string): string {
   const date = new Date(isoDate);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -78,10 +77,10 @@ function formatRelativeDate(isoDate: string, t: (key: string, params?: Record<st
   const diffHours = Math.floor(diffMs / 3_600_000);
   const diffDays = Math.floor(diffMs / 86_400_000);
 
-  if (diffMins < 1) return t('workspace.justNow');
-  if (diffMins < 60) return t('workspace.minutesAgo', { count: diffMins });
-  if (diffHours < 24) return t('workspace.hoursAgo', { count: diffHours });
-  if (diffDays < 30) return t('workspace.daysAgo', { count: diffDays });
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 30) return `${diffDays}d ago`;
   return date.toLocaleDateString();
 }
 
@@ -97,7 +96,6 @@ export function FileList({
   editingPath,
   editingDirty,
 }: FileListProps) {
-  const { t } = useLanguage();
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDir, setSortDir] = useState<SortDirection>('asc');
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
@@ -170,8 +168,10 @@ export function FileList({
     return (
       <div className="rounded-md border bg-background/30 p-8 text-center backdrop-blur-sm">
         <Folder className="mx-auto mb-3 size-10 text-muted-foreground/50" />
-        <p className="text-sm text-muted-foreground">{t('workspace.emptyTitle')}</p>
-        <p className="mt-1 text-xs text-muted-foreground/70">{t('workspace.emptyDescription')}</p>
+        <p className="text-sm text-muted-foreground">This workspace is empty</p>
+        <p className="mt-1 text-xs text-muted-foreground/70">
+          Files will appear here once an agent creates them
+        </p>
       </div>
     );
   }
@@ -181,39 +181,43 @@ export function FileList({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead
-              className="cursor-pointer select-none"
-              onClick={() => {
-                toggleSort('name');
-              }}
-            >
-              <span className="flex items-center gap-1">
-                {t('workspace.columnName')}{' '}
-                <ArrowUpDown className="size-3 text-muted-foreground" />
-              </span>
-            </TableHead>
-            <TableHead
-              className="w-[100px] cursor-pointer select-none"
-              onClick={() => {
-                toggleSort('size');
-              }}
-            >
-              <span className="flex items-center gap-1">
-                {t('workspace.columnSize')}{' '}
-                <ArrowUpDown className="size-3 text-muted-foreground" />
-              </span>
-            </TableHead>
-            <TableHead
-              className="w-[140px] cursor-pointer select-none"
-              onClick={() => {
-                toggleSort('modifiedAt');
-              }}
-            >
-              <span className="flex items-center gap-1">
-                {t('workspace.columnModified')}{' '}
-                <ArrowUpDown className="size-3 text-muted-foreground" />
-              </span>
-            </TableHead>
+            {(
+              [
+                { field: 'name', label: 'Name', className: 'cursor-pointer select-none' },
+                {
+                  field: 'size',
+                  label: 'Size',
+                  className: 'w-[100px] cursor-pointer select-none',
+                },
+                {
+                  field: 'modifiedAt',
+                  label: 'Modified',
+                  className: 'w-[140px] cursor-pointer select-none',
+                },
+              ] as const
+            ).map(({ field, label, className }) => {
+              const isActive = sortField === field;
+              const ariaSort: 'ascending' | 'descending' | 'none' = isActive
+                ? sortDir === 'asc'
+                  ? 'ascending'
+                  : 'descending'
+                : 'none';
+              return (
+                <TableHead key={field} className={className} aria-sort={ariaSort}>
+                  <button
+                    type="button"
+                    className="-mx-2 flex w-full items-center gap-1 rounded-sm px-2 py-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`Sort by ${label}`}
+                    onClick={() => {
+                      toggleSort(field);
+                    }}
+                  >
+                    {label}{' '}
+                    <ArrowUpDown className="size-3 text-muted-foreground" aria-hidden="true" />
+                  </button>
+                </TableHead>
+              );
+            })}
             <TableHead className="w-[40px]" />
           </TableRow>
         </TableHeader>
@@ -259,7 +263,7 @@ export function FileList({
                       />
                       <span className="truncate">{entry.name}</span>
                       {editingDirty && editingPath === entry.path && (
-                        <span className="text-amber-500 text-xs" title={t('workspace.unsavedChanges')}>
+                        <span className="text-amber-500 text-xs" title="Unsaved changes">
                           ●
                         </span>
                       )}
@@ -270,7 +274,7 @@ export function FileList({
                   {entry.isDirectory ? '—' : formatFileSize(entry.size)}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {formatRelativeDate(entry.modifiedAt, t)}
+                  {formatRelativeDate(entry.modifiedAt)}
                 </TableCell>
                 <TableCell className="p-0">
                   <DropdownMenu>
@@ -293,7 +297,7 @@ export function FileList({
                       {!entry.isDirectory && (
                         <DropdownMenuItem onSelect={() => onDownload?.(entry)}>
                           <Download className="mr-2 size-4" />
-                          {t('workspace.menuDownload')}
+                          Download
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
@@ -302,11 +306,11 @@ export function FileList({
                         }}
                       >
                         <Pencil className="mr-2 size-4" />
-                        {t('workspace.menuRename')}
+                        Rename
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => onMove?.(entry)}>
                         <Move className="mr-2 size-4" />
-                        {t('workspace.menuMove')}
+                        Move to...
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
@@ -314,7 +318,7 @@ export function FileList({
                         onSelect={() => onDelete?.(entry)}
                       >
                         <Trash2 className="mr-2 size-4" />
-                        {t('workspace.menuDelete')}
+                        Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
