@@ -18,7 +18,7 @@
 
 ## Clawix is not a chatbot
 
-| | GPT-type chatbot | Claude Code / OpenClaw | **Clawix** |
+| | GPT-type chatbot | Claude Code | **Clawix** |
 |---|---|---|---|
 | **What it is** | Conversational Q&A | Developer coding assistant | Multi-agent workflow platform |
 | **Who uses it** | Anyone asking questions | Software engineers | Finance, Legal, NGO, Construction teams |
