@@ -394,7 +394,14 @@ async function main(): Promise<void> {
     if (!apiKey) continue;
     await prisma.providerConfig.upsert({
       where: { provider: seed.provider },
-      update: {},
+      // Refresh credentials from env on re-seed; an empty `update` would pin the
+      // row to whatever key the first (often empty-DB) seed stored forever.
+      update: {
+        displayName: seed.displayName,
+        apiKey: encrypt(apiKey),
+        apiBaseUrl: seed.baseUrl ?? null,
+        isDefault: defaultProvider === seed.provider,
+      },
       create: {
         provider: seed.provider,
         displayName: seed.displayName,
